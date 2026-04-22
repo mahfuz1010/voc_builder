@@ -38,6 +38,7 @@ ADB="$ANDROID_SDK/platform-tools/adb"
 
 export PATH="$ANDROID_SDK/emulator:$ANDROID_SDK/platform-tools:$ANDROID_SDK/cmdline-tools/latest/bin:/snap/bin:$PATH"
 export ANDROID_HOME="$ANDROID_SDK"
+export ANDROID_SDK_ROOT="$ANDROID_SDK"
 
 # ── 1. Verify required tools ──────────────────────────────────
 info "Checking required tools…"
@@ -49,6 +50,9 @@ info "Checking required tools…"
 command -v "$FLUTTER" &>/dev/null || die "flutter not found. Install Flutter or set FLUTTER_CMD."
 
 success "All tools found."
+
+# Ensure ADB daemon is up before querying devices.
+"$ADB" start-server >/dev/null 2>&1 || true
 
 # ── 2. Install system image if missing ───────────────────────
 info "Checking system image: $SYSTEM_IMAGE…"
@@ -81,7 +85,7 @@ fi
 # ── 4. Check if emulator is already running ───────────────────
 info "Checking for running emulators…"
 
-RUNNING_EMULATOR=$("$ADB" devices 2>/dev/null | grep "^emulator-" | awk '{print $1}' | head -1)
+RUNNING_EMULATOR=$( ("$ADB" devices 2>/dev/null | grep "^emulator-" | awk '{print $1}' | head -1) || true )
 
 if [[ -n "$RUNNING_EMULATOR" ]]; then
     warn "Emulator already running: $RUNNING_EMULATOR — reusing it."
@@ -132,7 +136,7 @@ echo ""
 success "Emulator fully booted."
 
 # ── 6. Get emulator device ID for Flutter ────────────────────
-DEVICE_ID=$("$ADB" devices 2>/dev/null | grep "^emulator-" | awk '{print $1}' | head -1)
+DEVICE_ID=$( ("$ADB" devices 2>/dev/null | grep "^emulator-" | awk '{print $1}' | head -1) || true )
 [[ -n "$DEVICE_ID" ]] || die "Could not determine emulator device ID."
 info "Device: $DEVICE_ID"
 

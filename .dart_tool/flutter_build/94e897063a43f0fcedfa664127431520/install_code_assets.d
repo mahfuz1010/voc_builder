@@ -1,0 +1,1 @@
+ /home/mdra270887/workspace/my_projects/voc_builder/.dart_tool/flutter_build/94e897063a43f0fcedfa664127431520/native_assets.json: 

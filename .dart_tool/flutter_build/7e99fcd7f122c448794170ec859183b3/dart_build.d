@@ -1,0 +1,1 @@
+ /home/mdra270887/workspace/my_projects/voc_builder/.dart_tool/flutter_build/7e99fcd7f122c448794170ec859183b3/dart_build_result.json:  /home/mdra270887/snap/flutter/common/flutter/bin/cache/dart-sdk/version /home/mdra270887/workspace/my_projects/voc_builder/.dart_tool/package_config.json /home/mdra270887/workspace/my_projects/voc_builder/pubspec.yaml

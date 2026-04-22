@@ -14,7 +14,7 @@ class ArticleBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: AppColors.articleColor(article).withOpacity(0.2),
+        color: AppColors.articleColor(article).withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(6),
         border: Border.all(color: AppColors.articleColor(article), width: 1),
       ),
