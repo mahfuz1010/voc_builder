@@ -41,6 +41,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     final path = result.files.single.path!;
     final ext = path.split('.').last;
 
+    if (!mounted) return;
+
     if (_deckId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please select a target deck first.')));
@@ -93,7 +95,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
           // ── Deck selector ──────────────────────────────────────────────────
           decksAsync.when(
             data: (decks) => DropdownButtonFormField<String>(
-              value: _deckId,
+              initialValue: _deckId,
               decoration: const InputDecoration(labelText: AppStrings.selectDeck),
               hint: const Text('Select target deck'),
               items: decks
@@ -102,7 +104,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
               onChanged: (id) => setState(() => _deckId = id),
             ),
             loading: () => const LinearProgressIndicator(),
-            error: (_, __) => const SizedBox.shrink(),
+            error: (error, stackTrace) => const SizedBox.shrink(),
           ),
           const SizedBox(height: 16),
 

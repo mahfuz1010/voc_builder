@@ -223,10 +223,49 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
 
   void _flip() => setState(() => _isFlipped = !_isFlipped);
 
-  void _editCard() {
+  Future<void> _editCard() async {
     if (_queue.isEmpty) return;
-    final card = _queue[_currentIndex];
-    context.push('/edit-card', extra: card);
+    final original = _queue[_currentIndex];
+    await context.push('/edit-card', extra: original);
+    if (!mounted) return;
+
+    await _refreshEditedCard(original.id);
+  }
+
+  Future<void> _refreshEditedCard(String cardId) async {
+    final refreshed = await ref.read(cardRepositoryProvider).getById(cardId);
+    if (!mounted) return;
+
+    // Card was deleted or moved out of this deck while editing.
+    if (refreshed == null ||
+        (widget.deckId != null && refreshed.deckId != widget.deckId)) {
+      setState(() {
+        _baseSessionCards.removeWhere((c) => c.id == cardId);
+        _queue.removeWhere((c) => c.id == cardId);
+        _isFlipped = false;
+
+        if (_queue.isEmpty) {
+          _currentIndex = 0;
+          _sessionDone = true;
+        } else if (_currentIndex >= _queue.length) {
+          _currentIndex = _queue.length - 1;
+        }
+      });
+      return;
+    }
+
+    setState(() {
+      for (var i = 0; i < _baseSessionCards.length; i++) {
+        if (_baseSessionCards[i].id == cardId) {
+          _baseSessionCards[i] = refreshed;
+        }
+      }
+      for (var i = 0; i < _queue.length; i++) {
+        if (_queue[i].id == cardId) {
+          _queue[i] = refreshed;
+        }
+      }
+    });
   }
 
   @override
@@ -290,7 +329,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
                     ),
                   ),
                   Text(
-                    (progress * 100).toStringAsFixed(0) + '%',
+                    '${(progress * 100).toStringAsFixed(0)}%',
                     style: TextStyle(
                       fontSize: 11,
                       color: Colors.grey.shade600,
@@ -417,50 +456,51 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
 
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Transform(
-        transform: Matrix4.identity()
-          ..translate(animatedX, animatedY)
-          ..rotateZ(rotation),
-        alignment: Alignment.center,
-        child: Stack(
-          children: [
-            FlashcardView(
-              card: card,
-              isFlipped: _isFlipped,
-              isReversed: _reverseDirection,
-              onTap: _flip,
-              onEdit: _editCard,
-            ),
-            _buildDragWashOverlay(animatedX),
-            // Edit button overlay
-            if (!_isFlipped)
-              Positioned(
-                top: 12,
-                right: 12,
-                child: GestureDetector(
-                  onTap: _editCard,
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.92),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.12),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      Icons.edit_rounded,
-                      color: Colors.grey.shade700,
-                      size: 20,
+      child: Transform.translate(
+        offset: Offset(animatedX, animatedY),
+        child: Transform.rotate(
+          angle: rotation,
+          alignment: Alignment.center,
+          child: Stack(
+            children: [
+              FlashcardView(
+                card: card,
+                isFlipped: _isFlipped,
+                isReversed: _reverseDirection,
+                onTap: _flip,
+                onEdit: _editCard,
+              ),
+              _buildDragWashOverlay(animatedX),
+              // Edit button overlay
+              if (!_isFlipped)
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: GestureDetector(
+                    onTap: _editCard,
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.92),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.12),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.edit_rounded,
+                        color: Colors.grey.shade700,
+                        size: 20,
+                      ),
                     ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

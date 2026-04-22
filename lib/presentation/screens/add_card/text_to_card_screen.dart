@@ -156,7 +156,7 @@ class _TextToCardScreenState extends ConsumerState<TextToCardScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: decksAsync.when(
                 data: (decks) => DropdownButtonFormField<String>(
-                  value: _deckId,
+                  initialValue: _deckId,
                   decoration:
                       const InputDecoration(labelText: AppStrings.selectDeck),
                   hint: const Text('Select target deck'),
@@ -167,7 +167,7 @@ class _TextToCardScreenState extends ConsumerState<TextToCardScreen> {
                   onChanged: (id) => setState(() => _deckId = id),
                 ),
                 loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (error, stackTrace) => const SizedBox.shrink(),
               ),
             ),
 

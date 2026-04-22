@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/enums/article.dart';
 import '../../../domain/entities/flashcard.dart';
 import '../../providers/card_provider.dart';
 import '../../providers/deck_provider.dart';
@@ -108,6 +109,11 @@ class _CardTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final titleColor = card.article == Article.none
+        ? theme.colorScheme.onSurface
+        : AppColors.articleColor(card.article);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
@@ -117,12 +123,15 @@ class _CardTile extends ConsumerWidget {
           card.german,
           style: TextStyle(
             fontWeight: FontWeight.w600,
-            color: AppColors.articleColor(card.article),
+            color: titleColor,
           ),
         ),
         subtitle: Text(
           card.english,
-          style: const TextStyle(color: Colors.grey, fontSize: 13),
+          style: TextStyle(
+            color: theme.colorScheme.onSurfaceVariant,
+            fontSize: 13,
+          ),
         ),
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -130,7 +139,11 @@ class _CardTile extends ConsumerWidget {
           children: [
             MemoryStageBadge(stage: card.memoryStage),
             const SizedBox(height: 4),
-            const Icon(Icons.chevron_right, color: Colors.grey, size: 18),
+            Icon(
+              Icons.chevron_right,
+              color: theme.colorScheme.onSurfaceVariant,
+              size: 18,
+            ),
           ],
         ),
         onTap: () => _showCardActions(context, ref),
@@ -151,7 +164,7 @@ class _CardTile extends ConsumerWidget {
               title: const Text('Edit Card'),
               onTap: () {
                 Navigator.pop(context);
-                context.go('/edit-card', extra: card);
+                context.push('/edit-card', extra: card);
               },
             ),
             ListTile(

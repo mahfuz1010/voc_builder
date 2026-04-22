@@ -4,13 +4,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
-import '../../../core/enums/article.dart';
-import '../../../core/enums/word_type.dart';
+import '../../../data/services/example_sentence_service.dart';
 import '../../../data/services/translation_service.dart';
+import '../../../domain/entities/deck.dart';
 import '../../../domain/entities/flashcard.dart';
 import '../../providers/card_provider.dart';
 import '../../providers/deck_provider.dart';
-import '../../../domain/entities/deck.dart';
+import '../../providers/repository_providers.dart';
 
 class AddCardScreen extends ConsumerStatefulWidget {
   final Flashcard? editCard; // null = new card
@@ -25,50 +25,29 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
 
   late TextEditingController _germanCtrl;
   late TextEditingController _englishCtrl;
-  late TextEditingController _pluralCtrl;
-  late TextEditingController _exampleDeCtrl;
-  late TextEditingController _exampleEnCtrl;
-  late TextEditingController _verbIchCtrl;
-  late TextEditingController _partizipCtrl;
-  late TextEditingController _comparativeCtrl;
-  late TextEditingController _superlativeCtrl;
-  late TextEditingController _notesCtrl;
-  late TextEditingController _tagsCtrl;
+  late TextEditingController _exampleCtrl;
 
-  Article _article = Article.none;
-  WordType _wordType = WordType.other;
   String? _selectedDeckId;
   bool _saving = false;
+  bool _translatingDeToEn = false;
+  bool _translatingEnToDe = false;
+  bool _loadingExample = false;
 
   @override
   void initState() {
     super.initState();
     final c = widget.editCard;
-    _germanCtrl      = TextEditingController(text: c?.german ?? '');
-    _englishCtrl     = TextEditingController(text: c?.english ?? '');
-    _pluralCtrl      = TextEditingController(text: c?.plural ?? '');
-    _exampleDeCtrl   = TextEditingController(text: c?.exampleDe ?? '');
-    _exampleEnCtrl   = TextEditingController(text: c?.exampleEn ?? '');
-    _verbIchCtrl     = TextEditingController(text: c?.verbIchForm ?? '');
-    _partizipCtrl    = TextEditingController(text: c?.partizipII ?? '');
-    _comparativeCtrl = TextEditingController(text: c?.comparative ?? '');
-    _superlativeCtrl = TextEditingController(text: c?.superlative ?? '');
-    _notesCtrl       = TextEditingController(text: c?.notes ?? '');
-    _tagsCtrl        = TextEditingController(text: c?.tags.join(', ') ?? '');
-    _article         = c?.article ?? Article.none;
-    _wordType        = c?.wordType ?? WordType.other;
-    _selectedDeckId  = c?.deckId;
+    _germanCtrl = TextEditingController(text: c?.german ?? '');
+    _englishCtrl = TextEditingController(text: c?.english ?? '');
+    _exampleCtrl = TextEditingController(text: c?.notes ?? '');
+    _selectedDeckId = c?.deckId;
   }
 
   @override
   void dispose() {
-    for (final c in [
-      _germanCtrl, _englishCtrl, _pluralCtrl, _exampleDeCtrl, _exampleEnCtrl,
-      _verbIchCtrl, _partizipCtrl, _comparativeCtrl, _superlativeCtrl,
-      _notesCtrl, _tagsCtrl,
-    ]) {
-      c.dispose();
-    }
+    _germanCtrl.dispose();
+    _englishCtrl.dispose();
+    _exampleCtrl.dispose();
     super.dispose();
   }
 
@@ -90,76 +69,70 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // ── Core fields ──────────────────────────────────────────────────
             _sectionHeader('Word'),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: 100,
-                  child: _ArticleDropdown(
-                    value: _article,
-                    onChanged: (a) => setState(() => _article = a),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _Field(
-                    controller: _germanCtrl,
-                    label: AppStrings.germanWord,
-                    required: true,
-                  ),
-                ),
-              ],
+            _Field(
+              controller: _germanCtrl,
+              label: AppStrings.germanWord,
+              required: true,
+              suffix: _translatingDeToEn
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : IconButton(
+                      tooltip: 'Translate to English',
+                      icon: const Icon(Icons.translate),
+                      onPressed: _translateGermanToEnglish,
+                    ),
             ),
             const SizedBox(height: 12),
             _Field(
               controller: _englishCtrl,
               label: AppStrings.englishWord,
               required: true,
+              suffix: _translatingEnToDe
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : IconButton(
+                      tooltip: 'Translate to German',
+                      icon: const Icon(Icons.translate),
+                      onPressed: _translateEnglishToGerman,
+                    ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
-            // ── Type & grammar ───────────────────────────────────────────────
-            _sectionHeader('Grammar'),
-            _WordTypeDropdown(
-              value: _wordType,
-              onChanged: (t) => setState(() => _wordType = t),
+            _sectionHeader('Example'),
+            _Field(
+              controller: _exampleCtrl,
+              label: 'Example',
+              maxLines: 3,
+              suffix: _loadingExample
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : IconButton(
+                      tooltip: 'Generate easy sentence from German word',
+                      icon: const Icon(Icons.auto_awesome),
+                      onPressed: _generateExampleSentence,
+                    ),
             ),
-            const SizedBox(height: 12),
-
-            if (_wordType == WordType.noun) ...[
-              _Field(controller: _pluralCtrl, label: AppStrings.pluralForm),
-              const SizedBox(height: 12),
-            ],
-            if (_wordType == WordType.verb) ...[
-              _Field(controller: _verbIchCtrl, label: AppStrings.verbIch),
-              const SizedBox(height: 12),
-              _Field(controller: _partizipCtrl, label: AppStrings.partizipII),
-              const SizedBox(height: 12),
-            ],
-            if (_wordType == WordType.adjective) ...[
-              _Field(controller: _comparativeCtrl, label: AppStrings.comparative),
-              const SizedBox(height: 12),
-              _Field(controller: _superlativeCtrl, label: AppStrings.superlative),
-              const SizedBox(height: 12),
-            ],
-
-            // ── Examples ─────────────────────────────────────────────────────
-            _sectionHeader('Examples'),
-            _Field(controller: _exampleDeCtrl, label: AppStrings.exampleDe, maxLines: 2),
-            const SizedBox(height: 12),
-            _Field(controller: _exampleEnCtrl, label: AppStrings.exampleEn, maxLines: 2),
-            const SizedBox(height: 12),
-
-            // ── Notes & tags ──────────────────────────────────────────────────
-            _sectionHeader('Notes'),
-            _Field(controller: _notesCtrl, label: AppStrings.notes, maxLines: 3),
-            const SizedBox(height: 12),
-            _Field(controller: _tagsCtrl, label: AppStrings.tags),
             const SizedBox(height: 20),
 
-            // ── Deck selector ─────────────────────────────────────────────────
             _sectionHeader('Deck'),
             decksAsync.when(
               data: (decks) => _DeckSelector(
@@ -168,7 +141,7 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
                 onChanged: (id) => setState(() => _selectedDeckId = id),
               ),
               loading: () => const LinearProgressIndicator(),
-              error: (_, __) => const Text('Error loading decks'),
+              error: (error, stackTrace) => const Text('Error loading decks'),
             ),
             const SizedBox(height: 32),
 
@@ -207,15 +180,7 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
   Future<void> _save() async {
     setState(() => _saving = true);
 
-    final tags = _tagsCtrl.text
-        .split(',')
-        .map((t) => t.trim())
-        .where((t) => t.isNotEmpty)
-        .toList();
-
     try {
-      await _autofillMissingTranslation();
-
       if (!_formKey.currentState!.validate()) return;
       if (_selectedDeckId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -228,36 +193,33 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
         final updated = widget.editCard!.copyWith(
           german: _germanCtrl.text.trim(),
           english: _englishCtrl.text.trim(),
-          article: _article,
-          plural: _pluralCtrl.text.trim(),
-          wordType: _wordType,
-          exampleDe: _exampleDeCtrl.text.trim(),
-          exampleEn: _exampleEnCtrl.text.trim(),
-          verbIchForm: _verbIchCtrl.text.trim(),
-          partizipII: _partizipCtrl.text.trim(),
-          comparative: _comparativeCtrl.text.trim(),
-          superlative: _superlativeCtrl.text.trim(),
-          notes: _notesCtrl.text.trim(),
-          tags: tags,
+          notes: _exampleCtrl.text.trim(),
           deckId: _selectedDeckId,
         );
         await ref.read(cardNotifierProvider.notifier).updateCard(updated);
       } else {
+        final duplicate = await _findDuplicateInDeck(
+          deckId: _selectedDeckId!,
+          germanWord: _germanCtrl.text,
+        );
+
+        if (duplicate != null && mounted) {
+          final action = await _showDuplicateDialog(duplicate);
+          if (action == _DuplicateAction.edit) {
+            if (mounted) {
+              await context.push('/edit-card', extra: duplicate);
+            }
+            return;
+          }
+          // Skip adding by default when duplicate exists.
+          return;
+        }
+
         final card = buildNewCard(
           deckId: _selectedDeckId!,
           german: _germanCtrl.text.trim(),
           english: _englishCtrl.text.trim(),
-          article: _article,
-          plural: _pluralCtrl.text.trim(),
-          wordType: _wordType,
-          exampleDe: _exampleDeCtrl.text.trim(),
-          exampleEn: _exampleEnCtrl.text.trim(),
-          verbIchForm: _verbIchCtrl.text.trim(),
-          partizipII: _partizipCtrl.text.trim(),
-          comparative: _comparativeCtrl.text.trim(),
-          superlative: _superlativeCtrl.text.trim(),
-          notes: _notesCtrl.text.trim(),
-          tags: tags,
+          notes: _exampleCtrl.text.trim(),
         );
         await ref.read(cardNotifierProvider.notifier).addCard(card);
       }
@@ -273,23 +235,122 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
     }
   }
 
-  Future<void> _autofillMissingTranslation() async {
-    final german = _germanCtrl.text.trim();
-    final english = _englishCtrl.text.trim();
+  Future<Flashcard?> _findDuplicateInDeck({
+    required String deckId,
+    required String germanWord,
+  }) async {
+    final needle = germanWord.trim().toLowerCase();
+    if (needle.isEmpty) return null;
 
-    if (german.isEmpty && english.isNotEmpty) {
-      final translated = await TranslationService.translateToGerman(english);
-      if (translated.isNotEmpty) {
-        _germanCtrl.text = translated;
+    final cards = await ref.read(cardRepositoryProvider).getByDeck(deckId);
+    for (final card in cards) {
+      if (card.german.trim().toLowerCase() == needle) {
+        return card;
       }
+    }
+    return null;
+  }
+
+  Future<_DuplicateAction> _showDuplicateDialog(Flashcard duplicate) async {
+    final action = await showDialog<_DuplicateAction>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Duplicate found'),
+        content: Text(
+          'The word "${duplicate.german}" already exists in this deck. Do you want to edit the original card?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(_DuplicateAction.skip),
+            child: const Text('Skip'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(_DuplicateAction.edit),
+            child: const Text('Edit Original'),
+          ),
+        ],
+      ),
+    );
+
+    return action ?? _DuplicateAction.skip;
+  }
+
+  Future<void> _translateGermanToEnglish() async {
+    final german = _germanCtrl.text.trim();
+    if (german.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Type a German word first')),
+      );
       return;
     }
 
-    if (english.isEmpty && german.isNotEmpty) {
+    setState(() => _translatingDeToEn = true);
+    try {
       final translated = await TranslationService.translateToEnglish(german);
-      if (translated.isNotEmpty) {
-        _englishCtrl.text = translated;
+      if (!mounted) return;
+
+      if (translated.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not translate German to English')),
+        );
+        return;
       }
+      _englishCtrl.text = translated;
+    } finally {
+      if (mounted) setState(() => _translatingDeToEn = false);
+    }
+  }
+
+  Future<void> _translateEnglishToGerman() async {
+    final english = _englishCtrl.text.trim();
+    if (english.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Type an English word first')),
+      );
+      return;
+    }
+
+    setState(() => _translatingEnToDe = true);
+    try {
+      final translated = await TranslationService.translateToGerman(english);
+      if (!mounted) return;
+
+      if (translated.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not translate English to German')),
+        );
+        return;
+      }
+      _germanCtrl.text = translated;
+    } finally {
+      if (mounted) setState(() => _translatingEnToDe = false);
+    }
+  }
+
+  Future<void> _generateExampleSentence() async {
+    final german = _germanCtrl.text.trim();
+    if (german.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Type a German word first')),
+      );
+      return;
+    }
+
+    setState(() => _loadingExample = true);
+    try {
+      final sentence = await ExampleSentenceService.fetchSimpleGermanSentence(german);
+      if (!mounted) return;
+
+      if (sentence.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No simple sentence found for this word')),
+        );
+        return;
+      }
+
+      _exampleCtrl.text = sentence;
+    } finally {
+      if (mounted) setState(() => _loadingExample = false);
     }
   }
 
@@ -298,17 +359,10 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
       _safeBack(context);
       return;
     }
-    for (final c in [
-      _germanCtrl, _englishCtrl, _pluralCtrl, _exampleDeCtrl, _exampleEnCtrl,
-      _verbIchCtrl, _partizipCtrl, _comparativeCtrl, _superlativeCtrl,
-      _notesCtrl, _tagsCtrl,
-    ]) {
-      c.clear();
-    }
-    setState(() {
-      _article = Article.none;
-      _wordType = WordType.other;
-    });
+
+    _germanCtrl.clear();
+    _englishCtrl.clear();
+    _exampleCtrl.clear();
   }
 
   void _safeBack(BuildContext context) {
@@ -320,19 +374,21 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
   }
 }
 
-// ── Sub-widgets ───────────────────────────────────────────────────────────────
+enum _DuplicateAction { edit, skip }
 
 class _Field extends StatelessWidget {
   final TextEditingController controller;
   final String label;
   final bool required;
   final int maxLines;
+  final Widget? suffix;
 
   const _Field({
     required this.controller,
     required this.label,
     this.required = false,
     this.maxLines = 1,
+    this.suffix,
   });
 
   @override
@@ -340,57 +396,13 @@ class _Field extends StatelessWidget {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
-      decoration: InputDecoration(labelText: label),
+      decoration: InputDecoration(
+        labelText: label,
+        suffixIcon: suffix,
+      ),
       validator: required
           ? (v) => (v == null || v.trim().isEmpty) ? 'Required' : null
           : null,
-    );
-  }
-}
-
-class _ArticleDropdown extends StatelessWidget {
-  final Article value;
-  final ValueChanged<Article> onChanged;
-
-  const _ArticleDropdown({required this.value, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButtonFormField<Article>(
-      value: value,
-      decoration: const InputDecoration(labelText: 'Article'),
-      items: Article.values
-          .map((a) => DropdownMenuItem(
-                value: a,
-                child: Text(
-                  a.displayLabel,
-                  style: TextStyle(
-                    color: AppColors.articleColor(a),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ))
-          .toList(),
-      onChanged: (a) => onChanged(a ?? Article.none),
-    );
-  }
-}
-
-class _WordTypeDropdown extends StatelessWidget {
-  final WordType value;
-  final ValueChanged<WordType> onChanged;
-
-  const _WordTypeDropdown({required this.value, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButtonFormField<WordType>(
-      value: value,
-      decoration: const InputDecoration(labelText: AppStrings.wordType),
-      items: WordType.values
-          .map((t) => DropdownMenuItem(value: t, child: Text(t.label)))
-          .toList(),
-      onChanged: (t) => onChanged(t ?? WordType.other),
     );
   }
 }
@@ -416,7 +428,7 @@ class _DeckSelector extends StatelessWidget {
     }
 
     return DropdownButtonFormField<String>(
-      value: selectedId,
+      initialValue: selectedId,
       decoration: const InputDecoration(labelText: AppStrings.selectDeck),
       hint: const Text('Select a deck'),
       items: decks

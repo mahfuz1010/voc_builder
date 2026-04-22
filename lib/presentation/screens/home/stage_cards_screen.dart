@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_strings.dart';
 import '../../../core/enums/memory_stage.dart';
+import '../../../domain/entities/deck.dart';
+import '../../../domain/entities/flashcard.dart';
 import '../../providers/card_provider.dart';
 import '../../providers/deck_provider.dart';
 
@@ -75,12 +78,88 @@ class StageCardsScreen extends ConsumerWidget {
                   ),
                   subtitle: Text('${card.english} • $deckName'),
                   trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-                  onTap: () => context.go('/decks/${card.deckId}'),
+                  onTap: () => _showCardActions(
+                    context,
+                    ref,
+                    card,
+                    decksAsync.valueOrNull ?? const [],
+                  ),
                 ),
               );
             },
           );
         },
+      ),
+    );
+  }
+
+  void _showCardActions(
+    BuildContext context,
+    WidgetRef ref,
+    Flashcard card,
+    List<Deck> decks,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Edit Card'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/edit-card', extra: card);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.drive_file_move_outline),
+              title: const Text(AppStrings.moveTo),
+              onTap: () {
+                Navigator.pop(context);
+                _showMoveTo(context, ref, card, decks);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              title: const Text('Delete Card', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(context);
+                ref.read(cardNotifierProvider.notifier).deleteCard(card.id);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showMoveTo(
+    BuildContext context,
+    WidgetRef ref,
+    Flashcard card,
+    List<Deck> decks,
+  ) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text(AppStrings.moveTo),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: decks
+              .where((d) => d.id != card.deckId)
+              .map<Widget>(
+                (d) => ListTile(
+                  title: Text(d.name),
+                  onTap: () async {
+                    await ref.read(cardNotifierProvider.notifier).moveCard(card.id, d.id);
+                    if (dialogContext.mounted) Navigator.pop(dialogContext);
+                  },
+                ),
+              )
+              .toList(),
+        ),
       ),
     );
   }

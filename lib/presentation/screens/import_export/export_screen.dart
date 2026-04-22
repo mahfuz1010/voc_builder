@@ -120,7 +120,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
                 );
               },
               loading: () => const LinearProgressIndicator(),
-              error: (_, __) => const SizedBox.shrink(),
+              error: (error, stackTrace) => const SizedBox.shrink(),
             ),
             const SizedBox(height: 12),
           ],

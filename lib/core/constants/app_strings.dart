@@ -13,8 +13,8 @@ class AppStrings {
   // Home
   static const String dueToday   = 'Due Today';
   static const String newCards   = 'New';
-  static const String shortTerm  = 'Short-term';
-  static const String longTerm   = 'Long-term';
+  static const String shortTerm  = 'Short Term';
+  static const String longTerm   = 'Long Term';
   static const String streak     = 'Day Streak';
 
   // Study

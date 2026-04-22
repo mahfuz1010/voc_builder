@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
-import '../../../core/enums/memory_stage.dart';
 import '../../providers/card_provider.dart';
 import '../../providers/deck_provider.dart';
 import '../../providers/settings_provider.dart';
@@ -20,13 +19,26 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(AppStrings.appName),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () => context.go('/settings'),
+        centerTitle: true,
+        title: Text(
+          AppStrings.appName,
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.2,
+            color: Theme.of(context).colorScheme.primary,
+            shadows: [
+              Shadow(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.18),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -50,7 +62,7 @@ class HomeScreen extends ConsumerWidget {
             statsAsync.when(
               data: (stats) => _StatsGrid(stats: stats),
               loading: () => const _StatsGridSkeleton(),
-              error: (_, __) => const SizedBox.shrink(),
+              error: (error, stackTrace) => const SizedBox.shrink(),
             ),
 
             const SizedBox(height: 24),
@@ -96,7 +108,7 @@ class HomeScreen extends ConsumerWidget {
                           .toList(),
                     ),
               loading: () => const CircularProgressIndicator.adaptive(),
-              error: (_, __) => const SizedBox.shrink(),
+                    error: (error, stackTrace) => const SizedBox.shrink(),
             ),
           ],
         ),
@@ -229,7 +241,7 @@ class _StatCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: surfaceColor,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.3), width: 1),
+          border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -320,7 +332,7 @@ class _DeckTile extends ConsumerWidget {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.15),
+            color: AppColors.primary.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(10),
           ),
           child: const Icon(Icons.layers_outlined, color: AppColors.primary),

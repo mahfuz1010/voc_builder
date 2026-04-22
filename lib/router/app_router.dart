@@ -22,7 +22,7 @@ final appRouter = GoRouter(
       routes: [
         GoRoute(
           path: '/home',
-          builder: (_, __) => const HomeScreen(),
+          builder: (context, state) => const HomeScreen(),
         ),
         GoRoute(
           path: '/study',
@@ -33,7 +33,7 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: '/add-hub',
-          builder: (_, __) => const AddHubScreen(),
+          builder: (context, state) => const AddHubScreen(),
         ),
         GoRoute(
           path: '/add',
@@ -60,7 +60,7 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: '/decks',
-          builder: (_, __) => const DecksScreen(),
+          builder: (context, state) => const DecksScreen(),
           routes: [
             GoRoute(
               path: ':deckId',
@@ -86,7 +86,7 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: '/settings',
-          builder: (_, __) => const SettingsScreen(),
+          builder: (context, state) => const SettingsScreen(),
         ),
         GoRoute(
           path: '/cards-by-stage',
