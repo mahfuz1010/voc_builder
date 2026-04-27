@@ -6,11 +6,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/constants/supported_languages.dart';
 import '../../../core/enums/review_rating.dart';
 import '../../../domain/entities/flashcard.dart';
 import '../../providers/card_provider.dart';
+import '../../providers/deck_provider.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/profile_provider.dart';
 import 'widgets/flashcard_view.dart';
 import 'widgets/review_buttons.dart';
 
@@ -64,7 +67,9 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
     final settings = await ref.read(settingsProvider.future);
     final configuredLimit = settings.dailyNewLimit;
     final sessionLimit = configuredLimit.clamp(1, _maxDuePerSession);
-    final due = await repo.getDueCards(deckId: widget.deckId);
+    final due = widget.deckId != null
+      ? await repo.getDueCards(deckId: widget.deckId)
+      : await repo.getDueCardsByLanguage(ref.read(activeProfileProvider));
     if (mounted) {
       setState(() {
         _bidirectionalEnabled = settings.bidirectionalStudy;
@@ -169,9 +174,9 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
     final card = _queue[_currentIndex];
     final deckRepo = ref.read(deckRepositoryProvider);
     
-    final decks = await deckRepo.getAll();
-    final currentDeckId = widget.deckId;
-    final otherDecks = decks.where((d) => d.id != currentDeckId).toList();
+    final langCode = ref.read(activeProfileProvider);
+    final decks = await deckRepo.getByLanguage(langCode);
+    final otherDecks = decks.where((d) => d.id != card.deckId).toList();
 
     if (!mounted) return;
     
@@ -202,16 +207,15 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
 
     if (selectedDeck != null && mounted) {
       await ref.read(cardRepositoryProvider).moveToDeck(card.id, selectedDeck);
+      final movedCard = card.copyWith(deckId: selectedDeck);
       setState(() {
-        _baseSessionCards.removeWhere((c) => c.id == card.id);
-        _queue.removeAt(_currentIndex);
+        for (var i = 0; i < _baseSessionCards.length; i++) {
+          if (_baseSessionCards[i].id == card.id) {
+            _baseSessionCards[i] = movedCard;
+          }
+        }
+        _queue[_currentIndex] = movedCard;
         _isFlipped = false;
-        if (_currentIndex >= _queue.length && _queue.isNotEmpty) {
-          _currentIndex = _queue.length - 1;
-        }
-        if (_queue.isEmpty) {
-          _sessionDone = true;
-        }
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -236,9 +240,8 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
     final refreshed = await ref.read(cardRepositoryProvider).getById(cardId);
     if (!mounted) return;
 
-    // Card was deleted or moved out of this deck while editing.
-    if (refreshed == null ||
-        (widget.deckId != null && refreshed.deckId != widget.deckId)) {
+    // Card was deleted while editing.
+    if (refreshed == null) {
       setState(() {
         _baseSessionCards.removeWhere((c) => c.id == cardId);
         _queue.removeWhere((c) => c.id == cardId);
@@ -277,6 +280,10 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
     final nextCard = _currentIndex + 1 < _queue.length ? _queue[_currentIndex + 1] : null;
     final thirdCard = _currentIndex + 2 < _queue.length ? _queue[_currentIndex + 2] : null;
     final progress = (_currentIndex + 1) / _queue.length;
+    final deckMap = {
+      for (final deck in (ref.watch(decksStreamProvider).valueOrNull ?? const []))
+        deck.id: deck.name,
+    };
 
     return Scaffold(
       appBar: AppBar(
@@ -422,16 +429,28 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
                     // Third card preview (deep stack layer)
                     if (thirdCard != null)
                       Positioned.fill(
-                        child: _buildSecondaryPreviewCard(context, thirdCard),
+                          child: _buildSecondaryPreviewCard(
+                            context,
+                            thirdCard,
+                            deckName: deckMap[thirdCard.deckId],
+                          ),
                       ),
                   // Next card preview (scaled and behind)
                   if (nextCard != null)
                     Positioned.fill(
-                      child: _buildPreviewCard(context, nextCard),
+                        child: _buildPreviewCard(
+                          context,
+                          nextCard,
+                          deckName: deckMap[nextCard.deckId],
+                        ),
                     ),
                   // Current card with animation
                   Positioned.fill(
-                    child: _buildAnimatedCard(context, card),
+                    child: _buildAnimatedCard(
+                      context,
+                      card,
+                      deckName: deckMap[card.deckId],
+                    ),
                   ),
                 ],
               ),
@@ -446,7 +465,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
     );
   }
 
-  Widget _buildAnimatedCard(BuildContext context, Flashcard card) {
+  Widget _buildAnimatedCard(BuildContext context, Flashcard card, {String? deckName}) {
     final screenWidth = MediaQuery.of(context).size.width;
     final animatedX = _animatedDragX(context);
     final animatedY = _animatedDragY(context);
@@ -469,6 +488,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
                 isReversed: _reverseDirection,
                 onTap: _flip,
                 onEdit: _editCard,
+                deckName: deckName,
               ),
               _buildDragWashOverlay(animatedX),
               // Edit button overlay
@@ -506,11 +526,10 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
     );
   }
 
-  Widget _buildPreviewCard(BuildContext context, Flashcard nextCard) {
-    final progress = _stackProgress();
-    final scale = lerpDouble(0.9, 0.985, progress)!;
-    final opacity = lerpDouble(0.5, 0.9, progress)!;
-    final offsetY = lerpDouble(26, 6, progress)!;
+  Widget _buildPreviewCard(BuildContext context, Flashcard nextCard, {String? deckName}) {
+    const scale = 0.94;
+    const opacity = 0.72;
+    const offsetY = 18.0;
 
     return Transform.translate(
       offset: Offset(0, offsetY),
@@ -523,6 +542,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
             isFlipped: false,
             isReversed: _reverseDirection,
             isPreview: true,
+              deckName: deckName,
             onTap: () {},
           ),
         ),
@@ -530,11 +550,10 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
     );
   }
 
-  Widget _buildSecondaryPreviewCard(BuildContext context, Flashcard thirdCard) {
-    final progress = _stackProgress();
-    final scale = lerpDouble(0.84, 0.94, progress)!;
-    final opacity = lerpDouble(0.22, 0.45, progress)!;
-    final offsetY = lerpDouble(42, 18, progress)!;
+  Widget _buildSecondaryPreviewCard(BuildContext context, Flashcard thirdCard, {String? deckName}) {
+    const scale = 0.88;
+    const opacity = 0.34;
+    const offsetY = 34.0;
 
     return Transform.translate(
       offset: Offset(0, offsetY),
@@ -547,6 +566,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
             isFlipped: false,
             isReversed: _reverseDirection,
             isPreview: true,
+              deckName: deckName,
             onTap: () {},
           ),
         ),
@@ -606,13 +626,6 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
       _swipeTargetY,
       Curves.easeOutCubic.transform(_swipeAwayController.value),
     )!;
-  }
-
-  double _stackProgress() {
-    final distance = _isSwipeAnimating
-        ? (_swipeAwayController.value * 180)
-        : (_dragX.abs() + _dragY.abs());
-    return (distance / 140).clamp(0.0, 1.0);
   }
 
   void _animateAndSubmit(ReviewRating rating) {
@@ -678,16 +691,24 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
             ),
           ),
           const SizedBox(height: 10),
-          Text(
-            _bidirectionalEnabled
-                ? (_reverseDirection ? '🔄 English → German' : '🔤 German → English')
-                : '🔤 German → English',
-            style: TextStyle(
-              color: Colors.grey.shade600,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          Builder(builder: (context) {
+            final settings = ref.watch(settingsProvider).valueOrNull;
+            final t = SupportedLanguage.fromCode(settings?.targetLanguage ?? 'de');
+            final n = SupportedLanguage.fromCode(settings?.nativeLanguage ?? 'en');
+            final label = _bidirectionalEnabled
+                ? (_reverseDirection
+                    ? '🔄 ${n.name} → ${t.name}'
+                    : '🔤 ${t.name} → ${n.name}')
+                : '🔤 ${t.name} → ${n.name}';
+            return Text(
+              label,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            );
+          }),
         ],
       ),
     );

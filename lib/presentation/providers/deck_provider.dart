@@ -2,11 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/entities/deck.dart';
 import 'repository_providers.dart';
+import 'profile_provider.dart';
 
 // ── Watch all decks (stream) ──────────────────────────────────────────────────
 
 final decksStreamProvider = StreamProvider<List<Deck>>((ref) {
-  return ref.watch(deckRepositoryProvider).watchAll();
+  final langCode = ref.watch(activeProfileProvider);
+  return ref.watch(deckRepositoryProvider).watchByLanguage(langCode);
 });
 
 // ── Deck notifier (CRUD actions) ──────────────────────────────────────────────
@@ -14,12 +16,14 @@ final decksStreamProvider = StreamProvider<List<Deck>>((ref) {
 class DeckNotifier extends AsyncNotifier<List<Deck>> {
   @override
   Future<List<Deck>> build() {
-    return ref.watch(deckRepositoryProvider).getAll();
+    final langCode = ref.watch(activeProfileProvider);
+    return ref.watch(deckRepositoryProvider).getByLanguage(langCode);
   }
 
   Future<String> createDeck(String name) async {
     final repo = ref.read(deckRepositoryProvider);
-    final id = await repo.create(name);
+    final langCode = ref.read(activeProfileProvider);
+    final id = await repo.create(name, languageCode: langCode);
     ref.invalidateSelf();
     return id;
   }

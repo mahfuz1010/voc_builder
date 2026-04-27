@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_strings.dart';
+import '../../../core/constants/supported_languages.dart';
 import '../../providers/card_provider.dart';
 import '../../providers/settings_provider.dart';
 
@@ -15,10 +16,51 @@ class SettingsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text(AppStrings.settings)),
       body: settingsAsync.when(
-        data: (settings) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _SectionHeader(title: 'Appearance'),
+          data: (settings) {
+              final targetLang = SupportedLanguage.fromCode(settings.targetLanguage);
+              final nativeLang = SupportedLanguage.fromCode(settings.nativeLanguage);
+              return ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _SectionHeader(title: 'Language'),
+                ListTile(
+                  leading: Text(
+                    targetLang.flag,
+                    style: const TextStyle(fontSize: 28),
+                  ),
+                  title: const Text('Learning language'),
+                  subtitle: Text('${targetLang.name} (${targetLang.nativeName})'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _pickLanguage(
+                    context,
+                    ref,
+                    title: 'Learning language',
+                    current: settings.targetLanguage,
+                    exclude: settings.nativeLanguage,
+                    onSelected: (code) =>
+                        ref.read(settingsProvider.notifier).setTargetLanguage(code),
+                  ),
+                ),
+                ListTile(
+                  leading: Text(
+                    nativeLang.flag,
+                    style: const TextStyle(fontSize: 28),
+                  ),
+                  title: const Text('Native / interface language'),
+                  subtitle: Text('${nativeLang.name} (${nativeLang.nativeName})'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _pickLanguage(
+                    context,
+                    ref,
+                    title: 'Native language',
+                    current: settings.nativeLanguage,
+                    exclude: settings.targetLanguage,
+                    onSelected: (code) =>
+                        ref.read(settingsProvider.notifier).setNativeLanguage(code),
+                  ),
+                ),
+                const Divider(),
+                _SectionHeader(title: 'Appearance'),
             SwitchListTile(
               title: const Text(AppStrings.darkMode),
               value: settings.darkMode,
@@ -48,7 +90,9 @@ class SettingsScreen extends ConsumerWidget {
             ),
             SwitchListTile(
               title: const Text('Bidirectional study mode'),
-              subtitle: const Text('After German -> English, repeat as English -> German'),
+              subtitle: Text(
+                'After ${targetLang.name} \u2192 ${nativeLang.name}, repeat as ${nativeLang.name} \u2192 ${targetLang.name}',
+              ),
               value: settings.bidirectionalStudy,
               onChanged: (v) =>
                   ref.read(settingsProvider.notifier).setBidirectionalStudy(v),
@@ -75,10 +119,11 @@ class SettingsScreen extends ConsumerWidget {
             _SectionHeader(title: 'About'),
             const ListTile(
               title: Text('VocBuilder'),
-              subtitle: Text('Version 1.0.0\nOffline-first German vocabulary'),
+              subtitle: Text('Version 1.0.0\nOffline-first vocabulary builder'),
             ),
           ],
-        ),
+        );
+          },
         loading: () => const Center(child: CircularProgressIndicator.adaptive()),
         error: (e, _) => Center(child: Text('Error: $e')),
       ),
@@ -139,6 +184,46 @@ class SettingsScreen extends ConsumerWidget {
             },
             child: const Text('Reset'),
           ),
+        ],
+      ),
+    );
+  }
+  void _pickLanguage(
+    BuildContext context,
+    WidgetRef ref, {
+    required String title,
+    required String current,
+    required String exclude,
+    required ValueChanged<String> onSelected,
+  }) {
+    final options =
+        SupportedLanguage.all.where((l) => l.code != exclude).toList();
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => ListView(
+        shrinkWrap: true,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+          ),
+          for (final lang in options)
+            ListTile(
+              leading: Text(lang.flag, style: const TextStyle(fontSize: 24)),
+              title: Text(lang.name),
+              subtitle: Text(lang.nativeName),
+              trailing: lang.code == current
+                  ? const Icon(Icons.check, color: Color(0xFF7C4DFF))
+                  : null,
+              onTap: () {
+                onSelected(lang.code);
+                Navigator.pop(ctx);
+              },
+            ),
         ],
       ),
     );

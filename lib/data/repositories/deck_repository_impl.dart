@@ -12,6 +12,7 @@ class DeckRepositoryImpl implements DeckRepository {
   static entity.Deck _mapRow(Deck row) => entity.Deck(
         id: row.id,
         name: row.name,
+        languageCode: row.languageCode,
         createdAt: DateTime.fromMillisecondsSinceEpoch(row.createdAt),
       );
 
@@ -22,8 +23,21 @@ class DeckRepositoryImpl implements DeckRepository {
   }
 
   @override
+  Future<List<entity.Deck>> getByLanguage(String languageCode) async {
+    final rows = await _db.deckDao.getDecksByLanguage(languageCode);
+    return rows.map(_mapRow).toList();
+  }
+
+  @override
   Stream<List<entity.Deck>> watchAll() {
     return _db.deckDao.watchAllDecks().map((rows) => rows.map(_mapRow).toList());
+  }
+
+  @override
+  Stream<List<entity.Deck>> watchByLanguage(String languageCode) {
+    return _db.deckDao
+        .watchDecksByLanguage(languageCode)
+        .map((rows) => rows.map(_mapRow).toList());
   }
 
   @override
@@ -34,11 +48,12 @@ class DeckRepositoryImpl implements DeckRepository {
   }
 
   @override
-  Future<String> create(String name) async {
+  Future<String> create(String name, {String languageCode = 'de'}) async {
     final id = const Uuid().v4();
     await _db.deckDao.insertDeck(DecksCompanion(
       id: Value(id),
       name: Value(name),
+      languageCode: Value(languageCode),
       createdAt: Value(DateTime.now().millisecondsSinceEpoch),
     ));
     return id;
@@ -51,6 +66,7 @@ class DeckRepositoryImpl implements DeckRepository {
     await _db.deckDao.updateDeck(DecksCompanion(
       id: Value(id),
       name: Value(newName),
+      languageCode: Value(existing.languageCode),
       createdAt: Value(existing.createdAt),
     ));
   }

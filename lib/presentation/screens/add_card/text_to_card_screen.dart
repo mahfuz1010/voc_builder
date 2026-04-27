@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_strings.dart';
+import '../../../core/constants/supported_languages.dart';
 import '../../../core/utils/text_tokenizer.dart';
 import '../../../data/services/translation_service.dart';
 import '../../providers/card_provider.dart';
 import '../../providers/deck_provider.dart';
+import '../../providers/settings_provider.dart';
 
 /// Allows pasting a block of text, selecting individual words, then
 /// saving each selected word to a chosen deck as a card stub for later editing.
@@ -49,8 +51,10 @@ class _TextToCardScreenState extends ConsumerState<TextToCardScreen> {
     setState(() => _saving = true);
     try {
       final selectedWords = _tokens.where(_selected.contains).toList();
+      final settings = ref.read(settingsProvider).valueOrNull;
+      final nativeCode = settings?.nativeLanguage ?? 'en';
       final translatedWords = await Future.wait(
-        selectedWords.map(TranslationService.translateToEnglish),
+        selectedWords.map((w) => TranslationService.translate(w, to: nativeCode)),
       );
 
       final cards = List.generate(selectedWords.length, (i) {
@@ -91,6 +95,8 @@ class _TextToCardScreenState extends ConsumerState<TextToCardScreen> {
   @override
   Widget build(BuildContext context) {
     final decksAsync = ref.watch(decksStreamProvider);
+    final settings = ref.watch(settingsProvider).valueOrNull;
+    final targetLang = SupportedLanguage.fromCode(settings?.targetLanguage ?? 'de');
 
     return Scaffold(
       appBar: AppBar(
@@ -117,8 +123,8 @@ class _TextToCardScreenState extends ConsumerState<TextToCardScreen> {
                   controller: _textCtrl,
                   maxLines: 5,
                   decoration: InputDecoration(
-                    labelText: 'Paste German text',
-                    hintText: 'Paste German text only…',
+                    labelText: 'Paste ${targetLang.name} text',
+                    hintText: 'Paste ${targetLang.name} text only…',
                     suffixIcon: IconButton(
                       icon: const Icon(Icons.clear),
                       onPressed: () {
@@ -246,7 +252,7 @@ class _TextToCardScreenState extends ConsumerState<TextToCardScreen> {
                         size: 48, color: Colors.grey.shade600),
                     const SizedBox(height: 12),
                     Text(
-                      'Paste German text above and tap\n"Tokenize Words" to begin.',
+                      'Paste ${targetLang.name} text above and tap\n"Tokenize Words" to begin.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Colors.grey.shade500),
                     ),

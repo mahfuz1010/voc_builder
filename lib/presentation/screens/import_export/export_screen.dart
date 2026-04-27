@@ -10,6 +10,7 @@ import '../../../core/constants/app_strings.dart';
 import '../../../data/services/import_export_service.dart';
 import '../../../domain/entities/flashcard.dart';
 import '../../providers/deck_provider.dart';
+import '../../providers/profile_provider.dart';
 import '../../providers/repository_providers.dart';
 
 class ExportScreen extends ConsumerStatefulWidget {
@@ -31,7 +32,10 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
       final repo = ref.read(cardRepositoryProvider);
 
       if (allDecks) {
-        final decks = await ref.read(deckRepositoryProvider).getAll();
+        // Only export decks from the active language profile.
+        // If you want to export all languages, use getAll() instead.
+        final langCode = ref.read(activeProfileProvider);
+        final decks = await ref.read(deckRepositoryProvider).getByLanguage(langCode);
         for (final d in decks) {
           cards.addAll(await repo.getByDeck(d.id));
         }

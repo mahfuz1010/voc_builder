@@ -3,7 +3,7 @@ import '../app_database.dart';
 
 part 'card_dao.g.dart';
 
-@DriftAccessor(tables: [Cards])
+@DriftAccessor(tables: [Cards, Decks])
 class CardDao extends DatabaseAccessor<AppDatabase> with _$CardDaoMixin {
   CardDao(super.db);
 
@@ -32,6 +32,66 @@ class CardDao extends DatabaseAccessor<AppDatabase> with _$CardDaoMixin {
     }
     return query.watch();
   }
+
+  // ── Language-scoped queries (join on decks) ───────────────────────────────
+
+  Future<List<Card>> getDueCardsByLanguage(String languageCode) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final query = select(cards).join([
+      innerJoin(decks, decks.id.equalsExp(cards.deckId)),
+    ])
+      ..where(cards.nextReview.isSmallerOrEqualValue(now))
+      ..where(decks.languageCode.equals(languageCode));
+    return query.map((row) => row.readTable(cards)).get();
+  }
+
+  Stream<List<Card>> watchDueCardsByLanguage(String languageCode) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final query = select(cards).join([
+      innerJoin(decks, decks.id.equalsExp(cards.deckId)),
+    ])
+      ..where(cards.nextReview.isSmallerOrEqualValue(now))
+      ..where(decks.languageCode.equals(languageCode));
+    return query.map((row) => row.readTable(cards)).watch();
+  }
+
+  Future<int> countDueByLanguage(String languageCode) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final count = countAll();
+    final query = selectOnly(cards).join([
+      innerJoin(decks, decks.id.equalsExp(cards.deckId)),
+    ])
+      ..addColumns([count])
+      ..where(cards.nextReview.isSmallerOrEqualValue(now))
+      ..where(decks.languageCode.equals(languageCode));
+    final row = await query.getSingle();
+    return row.read(count) ?? 0;
+  }
+
+  Future<int> countByStageAndLanguage(int stage, String languageCode) async {
+    final count = countAll();
+    final query = selectOnly(cards).join([
+      innerJoin(decks, decks.id.equalsExp(cards.deckId)),
+    ])
+      ..addColumns([count])
+      ..where(cards.memoryStage.equals(stage))
+      ..where(decks.languageCode.equals(languageCode));
+    final row = await query.getSingle();
+    return row.read(count) ?? 0;
+  }
+
+  Future<int> countTotalByLanguage(String languageCode) async {
+    final count = countAll();
+    final query = selectOnly(cards).join([
+      innerJoin(decks, decks.id.equalsExp(cards.deckId)),
+    ])
+      ..addColumns([count])
+      ..where(decks.languageCode.equals(languageCode));
+    final row = await query.getSingle();
+    return row.read(count) ?? 0;
+  }
+
+  // ── Original unfiltered helpers (kept for deck-specific screens) ──────────
 
   Future<Card?> getCardById(String id) =>
       (select(cards)..where((c) => c.id.equals(id))).getSingleOrNull();
@@ -100,3 +160,4 @@ class CardDao extends DatabaseAccessor<AppDatabase> with _$CardDaoMixin {
   Future<void> insertAll(List<CardsCompanion> rows) =>
       batch((b) => b.insertAll(cards, rows));
 }
+

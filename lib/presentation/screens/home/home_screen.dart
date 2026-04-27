@@ -7,6 +7,8 @@ import '../../../core/constants/app_strings.dart';
 import '../../providers/card_provider.dart';
 import '../../providers/deck_provider.dart';
 import '../../providers/settings_provider.dart';
+import '../../../core/constants/supported_languages.dart';
+import '../../providers/profile_provider.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -16,6 +18,7 @@ class HomeScreen extends ConsumerWidget {
     final statsAsync = ref.watch(dashboardStatsProvider);
     final decksAsync = ref.watch(decksStreamProvider);
     final settingsAsync = ref.watch(settingsProvider);
+    final activeLang = ref.watch(activeLanguageProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -39,6 +42,10 @@ class HomeScreen extends ConsumerWidget {
             ],
           ),
         ),
+        actions: [
+          _ProfileSwitcherButton(activeLang: activeLang),
+          const SizedBox(width: 4),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -367,6 +374,126 @@ class _EmptyDecksHint extends StatelessWidget {
               style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Profile switcher ──────────────────────────────────────────────────────────
+
+class _ProfileSwitcherButton extends ConsumerWidget {
+  final SupportedLanguage activeLang;
+  const _ProfileSwitcherButton({required this.activeLang});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(24),
+      onTap: () => _showProfilePicker(context, ref),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(activeLang.flag, style: const TextStyle(fontSize: 18)),
+            const SizedBox(width: 6),
+            Text(
+              activeLang.name,
+              style: const TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.swap_horiz, size: 16, color: AppColors.primary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showProfilePicker(BuildContext context, WidgetRef ref) {
+    final all = SupportedLanguage.all;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.only(top: 12, bottom: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Switch Profile',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Each language has its own decks and cards.',
+                      style: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(ctx).size.height * 0.55,
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: all.length,
+                  itemBuilder: (_, i) {
+                    final lang = all[i];
+                    final isActive = lang.code == activeLang.code;
+                    return ListTile(
+                      leading: Text(
+                        lang.flag,
+                        style: const TextStyle(fontSize: 26),
+                      ),
+                      title: Text(lang.name),
+                      subtitle: Text(lang.nativeName),
+                      trailing: isActive
+                          ? const Icon(Icons.check_circle,
+                              color: AppColors.primary)
+                          : null,
+                      selected: isActive,
+                      onTap: () async {
+                        Navigator.pop(ctx);
+                        await ref
+                            .read(activeProfileProvider.notifier)
+                            .switchAndPersist(lang.code);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -7,6 +7,7 @@ import '../../core/enums/review_rating.dart';
 import '../../core/enums/word_type.dart';
 import '../../domain/entities/flashcard.dart';
 import 'repository_providers.dart';
+import 'profile_provider.dart';
 
 // ── Cards for a specific deck ─────────────────────────────────────────────────
 
@@ -17,7 +18,8 @@ final cardsForDeckProvider = StreamProvider.family<List<Flashcard>, String>(
 // ── Due cards ─────────────────────────────────────────────────────────────────
 
 final dueCardsProvider = StreamProvider<List<Flashcard>>((ref) {
-  return ref.watch(cardRepositoryProvider).watchDue();
+  final langCode = ref.watch(activeProfileProvider);
+  return ref.watch(cardRepositoryProvider).watchDueByLanguage(langCode);
 });
 
 final dueCardsByDeckProvider =
@@ -29,7 +31,8 @@ final cardsByStageProvider =
     FutureProvider.family<List<Flashcard>, MemoryStage>((ref, stage) async {
   final deckRepo = ref.read(deckRepositoryProvider);
   final cardRepo = ref.read(cardRepositoryProvider);
-  final decks = await deckRepo.getAll();
+  final langCode = ref.watch(activeProfileProvider);
+  final decks = await deckRepo.getByLanguage(langCode);
   final grouped = await Future.wait(decks.map((d) => cardRepo.getByDeck(d.id)));
   final allCards = grouped.expand((cards) => cards);
   return allCards.where((c) => c.memoryStage == stage).toList();
@@ -38,7 +41,8 @@ final cardsByStageProvider =
 // ── Dashboard stats ───────────────────────────────────────────────────────────
 
 final dashboardStatsProvider = FutureProvider<Map<String, int>>((ref) {
-  return ref.watch(cardRepositoryProvider).getDashboardStats();
+  final langCode = ref.watch(activeProfileProvider);
+  return ref.watch(cardRepositoryProvider).getDashboardStatsByLanguage(langCode);
 });
 
 // ── Card notifier ─────────────────────────────────────────────────────────────

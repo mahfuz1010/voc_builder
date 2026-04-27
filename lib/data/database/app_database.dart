@@ -12,9 +12,10 @@ part 'app_database.g.dart';
 // ─── Table definitions ────────────────────────────────────────────────────────
 
 class Decks extends Table {
-  TextColumn get id         => text()();
-  TextColumn get name       => text()();
-  IntColumn  get createdAt  => integer()();  // epoch ms
+  TextColumn get id           => text()();
+  TextColumn get name         => text()();
+  TextColumn get languageCode => text().withDefault(const Constant('de'))();
+  IntColumn  get createdAt    => integer()();  // epoch ms
 
   @override
   Set<Column> get primaryKey => {id};
@@ -54,12 +55,18 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async {
           await m.createAll();
+        },
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            // Add languageCode column to existing decks (default 'de').
+            await m.addColumn(decks, decks.languageCode);
+          }
         },
       );
 }

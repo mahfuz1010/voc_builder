@@ -7,15 +7,19 @@ class ExampleSentenceService {
   static const String _apiHost = 'api.tatoeba.org';
   static const String _apiPath = '/unstable/sentences';
 
-  /// Fetches a random German sentence that includes the provided word.
-  static Future<String> fetchSimpleGermanSentence(String germanWord) async {
-    final word = germanWord.trim();
-    if (word.isEmpty) return '';
+  /// Fetches a random sentence in [tatoebaLangCode] (3-letter ISO 639-3 code,
+  /// e.g. 'deu' for German, 'fra' for French) that contains [word].
+  static Future<String> fetchSimpleSentence(
+    String word, {
+    String tatoebaLangCode = 'deu',
+  }) async {
+    final w = word.trim();
+    if (w.isEmpty) return '';
 
     final uri = Uri.https(_apiHost, _apiPath, {
       'sort': 'random',
-      'lang': 'deu',
-      'q': word,
+      'lang': tatoebaLangCode,
+      'q': w,
     });
 
     final client = HttpClient();
@@ -36,7 +40,7 @@ class ExampleSentenceService {
         if (item is! Map<String, dynamic>) continue;
         final text = (item['text'] as String? ?? '').trim();
         if (text.isEmpty) continue;
-        if (!_containsWord(text, word)) continue;
+        if (!_containsWord(text, w)) continue;
         candidates.add(text);
       }
 

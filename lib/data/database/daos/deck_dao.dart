@@ -11,6 +11,12 @@ class DeckDao extends DatabaseAccessor<AppDatabase> with _$DeckDaoMixin {
 
   Stream<List<Deck>> watchAllDecks() => select(decks).watch();
 
+  Future<List<Deck>> getDecksByLanguage(String langCode) =>
+      (select(decks)..where((d) => d.languageCode.equals(langCode))).get();
+
+  Stream<List<Deck>> watchDecksByLanguage(String langCode) =>
+      (select(decks)..where((d) => d.languageCode.equals(langCode))).watch();
+
   Future<Deck?> getDeckById(String id) =>
       (select(decks)..where((d) => d.id.equals(id))).getSingleOrNull();
 

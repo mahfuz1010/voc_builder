@@ -26,6 +26,18 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, Deck> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _languageCodeMeta = const VerificationMeta(
+    'languageCode',
+  );
+  @override
+  late final GeneratedColumn<String> languageCode = GeneratedColumn<String>(
+    'language_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('de'),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -38,7 +50,7 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, Deck> {
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, name, createdAt];
+  List<GeneratedColumn> get $columns => [id, name, languageCode, createdAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -63,6 +75,15 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, Deck> {
       );
     } else if (isInserting) {
       context.missing(_nameMeta);
+    }
+    if (data.containsKey('language_code')) {
+      context.handle(
+        _languageCodeMeta,
+        languageCode.isAcceptableOrUnknown(
+          data['language_code']!,
+          _languageCodeMeta,
+        ),
+      );
     }
     if (data.containsKey('created_at')) {
       context.handle(
@@ -89,6 +110,10 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, Deck> {
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
+      languageCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}language_code'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -105,13 +130,20 @@ class $DecksTable extends Decks with TableInfo<$DecksTable, Deck> {
 class Deck extends DataClass implements Insertable<Deck> {
   final String id;
   final String name;
+  final String languageCode;
   final int createdAt;
-  const Deck({required this.id, required this.name, required this.createdAt});
+  const Deck({
+    required this.id,
+    required this.name,
+    required this.languageCode,
+    required this.createdAt,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
+    map['language_code'] = Variable<String>(languageCode);
     map['created_at'] = Variable<int>(createdAt);
     return map;
   }
@@ -120,6 +152,7 @@ class Deck extends DataClass implements Insertable<Deck> {
     return DecksCompanion(
       id: Value(id),
       name: Value(name),
+      languageCode: Value(languageCode),
       createdAt: Value(createdAt),
     );
   }
@@ -132,6 +165,7 @@ class Deck extends DataClass implements Insertable<Deck> {
     return Deck(
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
+      languageCode: serializer.fromJson<String>(json['languageCode']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
     );
   }
@@ -141,19 +175,29 @@ class Deck extends DataClass implements Insertable<Deck> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
+      'languageCode': serializer.toJson<String>(languageCode),
       'createdAt': serializer.toJson<int>(createdAt),
     };
   }
 
-  Deck copyWith({String? id, String? name, int? createdAt}) => Deck(
+  Deck copyWith({
+    String? id,
+    String? name,
+    String? languageCode,
+    int? createdAt,
+  }) => Deck(
     id: id ?? this.id,
     name: name ?? this.name,
+    languageCode: languageCode ?? this.languageCode,
     createdAt: createdAt ?? this.createdAt,
   );
   Deck copyWithCompanion(DecksCompanion data) {
     return Deck(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
+      languageCode: data.languageCode.present
+          ? data.languageCode.value
+          : this.languageCode,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -163,36 +207,41 @@ class Deck extends DataClass implements Insertable<Deck> {
     return (StringBuffer('Deck(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('languageCode: $languageCode, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, createdAt);
+  int get hashCode => Object.hash(id, name, languageCode, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Deck &&
           other.id == this.id &&
           other.name == this.name &&
+          other.languageCode == this.languageCode &&
           other.createdAt == this.createdAt);
 }
 
 class DecksCompanion extends UpdateCompanion<Deck> {
   final Value<String> id;
   final Value<String> name;
+  final Value<String> languageCode;
   final Value<int> createdAt;
   final Value<int> rowid;
   const DecksCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
+    this.languageCode = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DecksCompanion.insert({
     required String id,
     required String name,
+    this.languageCode = const Value.absent(),
     required int createdAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -201,12 +250,14 @@ class DecksCompanion extends UpdateCompanion<Deck> {
   static Insertable<Deck> custom({
     Expression<String>? id,
     Expression<String>? name,
+    Expression<String>? languageCode,
     Expression<int>? createdAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
+      if (languageCode != null) 'language_code': languageCode,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -215,12 +266,14 @@ class DecksCompanion extends UpdateCompanion<Deck> {
   DecksCompanion copyWith({
     Value<String>? id,
     Value<String>? name,
+    Value<String>? languageCode,
     Value<int>? createdAt,
     Value<int>? rowid,
   }) {
     return DecksCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
+      languageCode: languageCode ?? this.languageCode,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -234,6 +287,9 @@ class DecksCompanion extends UpdateCompanion<Deck> {
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
+    }
+    if (languageCode.present) {
+      map['language_code'] = Variable<String>(languageCode.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
@@ -249,6 +305,7 @@ class DecksCompanion extends UpdateCompanion<Deck> {
     return (StringBuffer('DecksCompanion(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('languageCode: $languageCode, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -1411,6 +1468,7 @@ typedef $$DecksTableCreateCompanionBuilder =
     DecksCompanion Function({
       required String id,
       required String name,
+      Value<String> languageCode,
       required int createdAt,
       Value<int> rowid,
     });
@@ -1418,6 +1476,7 @@ typedef $$DecksTableUpdateCompanionBuilder =
     DecksCompanion Function({
       Value<String> id,
       Value<String> name,
+      Value<String> languageCode,
       Value<int> createdAt,
       Value<int> rowid,
     });
@@ -1461,6 +1520,11 @@ class $$DecksTableFilterComposer extends Composer<_$AppDatabase, $DecksTable> {
 
   ColumnFilters<String> get name => $composableBuilder(
     column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get languageCode => $composableBuilder(
+    column: $table.languageCode,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1514,6 +1578,11 @@ class $$DecksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get languageCode => $composableBuilder(
+    column: $table.languageCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -1534,6 +1603,11 @@ class $$DecksTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get languageCode => $composableBuilder(
+    column: $table.languageCode,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -1594,11 +1668,13 @@ class $$DecksTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
+                Value<String> languageCode = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DecksCompanion(
                 id: id,
                 name: name,
+                languageCode: languageCode,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -1606,11 +1682,13 @@ class $$DecksTableTableManager
               ({
                 required String id,
                 required String name,
+                Value<String> languageCode = const Value.absent(),
                 required int createdAt,
                 Value<int> rowid = const Value.absent(),
               }) => DecksCompanion.insert(
                 id: id,
                 name: name,
+                languageCode: languageCode,
                 createdAt: createdAt,
                 rowid: rowid,
               ),

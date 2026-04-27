@@ -4,6 +4,7 @@ import '../../core/enums/review_rating.dart';
 abstract class CardRepository {
   Future<List<Flashcard>> getByDeck(String deckId);
   Future<List<Flashcard>> getDueCards({String? deckId});
+  Future<List<Flashcard>> getDueCardsByLanguage(String languageCode);
   Future<Flashcard?> getById(String id);
   Future<void> add(Flashcard card);
   Future<void> update(Flashcard card);
@@ -13,8 +14,10 @@ abstract class CardRepository {
   Future<Map<String, int>> getStatsByDeck(String deckId);
   Stream<List<Flashcard>> watchByDeck(String deckId);
   Stream<List<Flashcard>> watchDue({String? deckId});
+  Stream<List<Flashcard>> watchDueByLanguage(String languageCode);
   Future<int> getTotalDue();
   Future<Map<String, int>> getDashboardStats();
+  Future<Map<String, int>> getDashboardStatsByLanguage(String languageCode);
   Future<void> addAll(List<Flashcard> cards);
   Future<int> resetShortTermCards();
 }

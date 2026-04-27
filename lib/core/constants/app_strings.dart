@@ -12,9 +12,9 @@ class AppStrings {
 
   // Home
   static const String dueToday   = 'Due Today';
-  static const String newCards   = 'New';
+  static const String newCards   = 'New Cards';
   static const String shortTerm  = 'Short Term';
-  static const String longTerm   = 'Long Term';
+  static const String longTerm   = 'Known Cards';
   static const String streak     = 'Day Streak';
 
   // Study

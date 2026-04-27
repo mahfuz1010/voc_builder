@@ -1,11 +1,17 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/constants/app_strings.dart';
+import '../../../data/services/import_export_service.dart';
 import '../../../domain/entities/deck.dart';
 import '../../providers/card_provider.dart';
 import '../../providers/deck_provider.dart';
+import '../../providers/repository_providers.dart';
 
 class DecksScreen extends ConsumerWidget {
   const DecksScreen({super.key});
@@ -130,6 +136,14 @@ class _DeckCard extends ConsumerWidget {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.share_outlined),
+              title: const Text('Share deck'),
+              onTap: () {
+                Navigator.pop(context);
+                _shareDeck(context, ref);
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.delete_outline, color: Colors.red),
               title: const Text(AppStrings.deleteDeck,
                   style: TextStyle(color: Colors.red)),
@@ -174,6 +188,26 @@ class _DeckCard extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _shareDeck(BuildContext context, WidgetRef ref) async {
+    try {
+      final cards = await ref.read(cardRepositoryProvider).getByDeck(deck.id);
+      final content = ExportService.toCsv(cards);
+      final tempDir = await getTemporaryDirectory();
+      final fileName = '${deck.name.replaceAll(RegExp(r'[^\w]'), '_')}.csv';
+      final file = File('${tempDir.path}/$fileName');
+      await file.writeAsString(content);
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: '${deck.name} – VocBuilder deck',
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Share failed: $e')));
+      }
+    }
   }
 
   void _confirmDelete(BuildContext context, WidgetRef ref) {

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/constants/supported_languages.dart';
 import '../../../data/services/example_sentence_service.dart';
 import '../../../data/services/translation_service.dart';
 import '../../../domain/entities/deck.dart';
@@ -11,6 +12,7 @@ import '../../../domain/entities/flashcard.dart';
 import '../../providers/card_provider.dart';
 import '../../providers/deck_provider.dart';
 import '../../providers/repository_providers.dart';
+import '../../providers/settings_provider.dart';
 
 class AddCardScreen extends ConsumerStatefulWidget {
   final Flashcard? editCard; // null = new card
@@ -55,6 +57,9 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
   Widget build(BuildContext context) {
     final decksAsync = ref.watch(decksStreamProvider);
     final isEdit = widget.editCard != null;
+    final settings = ref.watch(settingsProvider).valueOrNull;
+    final targetLang = SupportedLanguage.fromCode(settings?.targetLanguage ?? 'de');
+    final nativeLang = SupportedLanguage.fromCode(settings?.nativeLanguage ?? 'en');
 
     return Scaffold(
       appBar: AppBar(
@@ -72,7 +77,7 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
             _sectionHeader('Word'),
             _Field(
               controller: _germanCtrl,
-              label: AppStrings.germanWord,
+              label: '${targetLang.flag} ${targetLang.name} Word',
               required: true,
               suffix: _translatingDeToEn
                   ? const Padding(
@@ -84,15 +89,15 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
                       ),
                     )
                   : IconButton(
-                      tooltip: 'Translate to English',
+                      tooltip: 'Translate to ${nativeLang.name}',
                       icon: const Icon(Icons.translate),
-                      onPressed: _translateGermanToEnglish,
+                      onPressed: () => _translateTargetToNative(targetLang, nativeLang),
                     ),
             ),
             const SizedBox(height: 12),
             _Field(
               controller: _englishCtrl,
-              label: AppStrings.englishWord,
+              label: '${nativeLang.flag} ${nativeLang.name} Translation',
               required: true,
               suffix: _translatingEnToDe
                   ? const Padding(
@@ -104,9 +109,9 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
                       ),
                     )
                   : IconButton(
-                      tooltip: 'Translate to German',
+                      tooltip: 'Translate to ${targetLang.name}',
                       icon: const Icon(Icons.translate),
-                      onPressed: _translateEnglishToGerman,
+                      onPressed: () => _translateNativeToTarget(targetLang, nativeLang),
                     ),
             ),
             const SizedBox(height: 16),
@@ -126,9 +131,9 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
                       ),
                     )
                   : IconButton(
-                      tooltip: 'Generate easy sentence from German word',
+                      tooltip: 'Generate example sentence',
                       icon: const Icon(Icons.auto_awesome),
-                      onPressed: _generateExampleSentence,
+                      onPressed: () => _generateExampleSentence(targetLang),
                     ),
             ),
             const SizedBox(height: 20),
@@ -275,23 +280,33 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
     return action ?? _DuplicateAction.skip;
   }
 
-  Future<void> _translateGermanToEnglish() async {
-    final german = _germanCtrl.text.trim();
-    if (german.isEmpty) {
+  Future<void> _translateTargetToNative(
+    SupportedLanguage targetLang,
+    SupportedLanguage nativeLang,
+  ) async {
+    final word = _germanCtrl.text.trim();
+    if (word.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Type a German word first')),
+        SnackBar(content: Text('Type a ${targetLang.name} word first')),
       );
       return;
     }
 
     setState(() => _translatingDeToEn = true);
     try {
-      final translated = await TranslationService.translateToEnglish(german);
+      final translated = await TranslationService.translate(
+        word,
+        to: nativeLang.code,
+      );
       if (!mounted) return;
 
       if (translated.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not translate German to English')),
+          SnackBar(
+            content: Text(
+              'Could not translate ${targetLang.name} to ${nativeLang.name}',
+            ),
+          ),
         );
         return;
       }
@@ -301,23 +316,33 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
     }
   }
 
-  Future<void> _translateEnglishToGerman() async {
-    final english = _englishCtrl.text.trim();
-    if (english.isEmpty) {
+  Future<void> _translateNativeToTarget(
+    SupportedLanguage targetLang,
+    SupportedLanguage nativeLang,
+  ) async {
+    final word = _englishCtrl.text.trim();
+    if (word.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Type an English word first')),
+        SnackBar(content: Text('Type a ${nativeLang.name} word first')),
       );
       return;
     }
 
     setState(() => _translatingEnToDe = true);
     try {
-      final translated = await TranslationService.translateToGerman(english);
+      final translated = await TranslationService.translate(
+        word,
+        to: targetLang.code,
+      );
       if (!mounted) return;
 
       if (translated.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not translate English to German')),
+          SnackBar(
+            content: Text(
+              'Could not translate ${nativeLang.name} to ${targetLang.name}',
+            ),
+          ),
         );
         return;
       }
@@ -327,18 +352,21 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
     }
   }
 
-  Future<void> _generateExampleSentence() async {
-    final german = _germanCtrl.text.trim();
-    if (german.isEmpty) {
+  Future<void> _generateExampleSentence(SupportedLanguage targetLang) async {
+    final word = _germanCtrl.text.trim();
+    if (word.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Type a German word first')),
+        SnackBar(content: Text('Type a ${targetLang.name} word first')),
       );
       return;
     }
 
     setState(() => _loadingExample = true);
     try {
-      final sentence = await ExampleSentenceService.fetchSimpleGermanSentence(german);
+      final sentence = await ExampleSentenceService.fetchSimpleSentence(
+        word,
+        tatoebaLangCode: targetLang.tatoebaCode,
+      );
       if (!mounted) return;
 
       if (sentence.isEmpty) {

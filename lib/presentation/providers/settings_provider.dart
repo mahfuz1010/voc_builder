@@ -8,6 +8,12 @@ class AppSettings {
   final bool bidirectionalStudy;
   final int streakDays;
   final DateTime? lastStudyDate;
+  /// BCP-47 code of the language the user is learning (e.g. 'de', 'fr').
+  final String targetLanguage;
+  /// BCP-47 code of the user's native/interface language (e.g. 'en').
+  final String nativeLanguage;
+  /// Whether the user has completed language onboarding.
+  final bool isOnboarded;
 
   const AppSettings({
     this.darkMode = true,
@@ -15,6 +21,9 @@ class AppSettings {
     this.bidirectionalStudy = true,
     this.streakDays = 0,
     this.lastStudyDate,
+    this.targetLanguage = 'de',
+    this.nativeLanguage = 'en',
+    this.isOnboarded = false,
   });
 
   AppSettings copyWith({
@@ -23,6 +32,9 @@ class AppSettings {
     bool? bidirectionalStudy,
     int? streakDays,
     DateTime? lastStudyDate,
+    String? targetLanguage,
+    String? nativeLanguage,
+    bool? isOnboarded,
   }) {
     return AppSettings(
       darkMode: darkMode ?? this.darkMode,
@@ -30,6 +42,9 @@ class AppSettings {
       bidirectionalStudy: bidirectionalStudy ?? this.bidirectionalStudy,
       streakDays: streakDays ?? this.streakDays,
       lastStudyDate: lastStudyDate ?? this.lastStudyDate,
+      targetLanguage: targetLanguage ?? this.targetLanguage,
+      nativeLanguage: nativeLanguage ?? this.nativeLanguage,
+      isOnboarded: isOnboarded ?? this.isOnboarded,
     );
   }
 }
@@ -40,6 +55,9 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
   static const _bidirectionalStudyKey = 'bidirectional_study';
   static const _streakKey = 'streak_days';
   static const _lastStudyKey = 'last_study_date';
+  static const _targetLanguageKey = 'target_language';
+  static const _nativeLanguageKey = 'native_language';
+  static const _isOnboardedKey = 'is_onboarded';
 
   @override
   Future<AppSettings> build() async {
@@ -53,6 +71,9 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
       lastStudyDate: lastStudyMs != null
           ? DateTime.fromMillisecondsSinceEpoch(lastStudyMs)
           : null,
+      targetLanguage: prefs.getString(_targetLanguageKey) ?? 'de',
+      nativeLanguage: prefs.getString(_nativeLanguageKey) ?? 'en',
+      isOnboarded: prefs.getBool(_isOnboardedKey) ?? false,
     );
   }
 
@@ -77,6 +98,27 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
     state = AsyncData(current.copyWith(bidirectionalStudy: value));
   }
 
+  Future<void> setTargetLanguage(String code) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_targetLanguageKey, code);
+    final current = state.valueOrNull ?? const AppSettings();
+    state = AsyncData(current.copyWith(targetLanguage: code));
+  }
+
+  Future<void> setNativeLanguage(String code) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_nativeLanguageKey, code);
+    final current = state.valueOrNull ?? const AppSettings();
+    state = AsyncData(current.copyWith(nativeLanguage: code));
+  }
+
+  Future<void> setOnboarded() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_isOnboardedKey, true);
+    final current = state.valueOrNull ?? const AppSettings();
+    state = AsyncData(current.copyWith(isOnboarded: true));
+  }
+
   Future<void> recordStudySession() async {
     final prefs = await SharedPreferences.getInstance();
     final current = state.valueOrNull ?? const AppSettings();
@@ -87,7 +129,9 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
     if (last == null) {
       newStreak = 1;
     } else {
-      final diff = now.difference(last).inDays;
+      final today = DateTime(now.year, now.month, now.day);
+      final lastDay = DateTime(last.year, last.month, last.day);
+      final diff = today.difference(lastDay).inDays;
       if (diff == 1) {
         newStreak++;
       } else if (diff > 1) {

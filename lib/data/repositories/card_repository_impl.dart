@@ -94,6 +94,19 @@ class CardRepositoryImpl implements CardRepository {
   }
 
   @override
+  Future<List<Flashcard>> getDueCardsByLanguage(String languageCode) async {
+    final rows = await _db.cardDao.getDueCardsByLanguage(languageCode);
+    return rows.map(_fromRow).toList();
+  }
+
+  @override
+  Stream<List<Flashcard>> watchDueByLanguage(String languageCode) {
+    return _db.cardDao
+        .watchDueCardsByLanguage(languageCode)
+        .map((rows) => rows.map(_fromRow).toList());
+  }
+
+  @override
   Future<Flashcard?> getById(String id) async {
     final row = await _db.cardDao.getCardById(id);
     return row == null ? null : _fromRow(row);
@@ -152,6 +165,16 @@ class CardRepositoryImpl implements CardRepository {
       'new': await _db.cardDao.countByStage(0),
       'shortTerm': await _db.cardDao.countByStage(1),
       'longTerm': await _db.cardDao.countByStage(2),
+    };
+  }
+
+  @override
+  Future<Map<String, int>> getDashboardStatsByLanguage(String languageCode) async {
+    return {
+      'due': await _db.cardDao.countDueByLanguage(languageCode),
+      'new': await _db.cardDao.countByStageAndLanguage(0, languageCode),
+      'shortTerm': await _db.cardDao.countByStageAndLanguage(1, languageCode),
+      'longTerm': await _db.cardDao.countByStageAndLanguage(2, languageCode),
     };
   }
 

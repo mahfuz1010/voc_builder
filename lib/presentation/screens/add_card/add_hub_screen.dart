@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/supported_languages.dart';
+import '../../providers/settings_provider.dart';
 
 /// Hub screen reached via the "Add" bottom nav tab.
 /// Offers quick navigation to manual card creation or text-to-card flow.
-class AddHubScreen extends StatelessWidget {
+class AddHubScreen extends ConsumerWidget {
   const AddHubScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider).valueOrNull;
+    final targetLang = SupportedLanguage.fromCode(settings?.targetLanguage ?? 'de');
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add Cards'),
@@ -40,9 +45,17 @@ class AddHubScreen extends StatelessWidget {
             _OptionCard(
               icon: Icons.text_snippet_outlined,
               title: 'Text to Cards',
-              subtitle: 'Paste text, select words, create stubs',
+              subtitle: 'Paste ${targetLang.name} text, select words, create stubs',
               color: AppColors.secondary,
               onTap: () => context.go('/text-to-card'),
+            ),
+            const SizedBox(height: 16),
+            _OptionCard(
+              icon: Icons.document_scanner_outlined,
+              title: 'Image to Cards',
+              subtitle: 'Scan or pick a photo, extract ${targetLang.name} words',
+              color: const Color(0xFF26C6DA),
+              onTap: () => context.go('/image-to-card'),
             ),
             const SizedBox(height: 16),
             _OptionCard(

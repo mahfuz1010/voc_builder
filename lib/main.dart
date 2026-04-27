@@ -18,6 +18,7 @@ class DuoCardsApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settingsAsync = ref.watch(settingsProvider);
     final isDark = settingsAsync.valueOrNull?.darkMode ?? true;
+    final router = ref.watch(routerProvider);
 
     return MaterialApp.router(
       title: AppStrings.appName,
@@ -25,7 +26,7 @@ class DuoCardsApp extends ConsumerWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
-      routerConfig: appRouter,
+      routerConfig: router,
     );
   }
 }

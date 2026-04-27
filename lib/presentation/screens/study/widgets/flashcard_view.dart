@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/supported_languages.dart';
 import '../../../../core/enums/article.dart';
 import '../../../../core/enums/word_type.dart';
 import '../../../../domain/entities/flashcard.dart';
+import '../../../providers/settings_provider.dart';
 import '../../../widgets/article_badge.dart';
 import '../../../widgets/memory_stage_badge.dart';
 
-class FlashcardView extends StatefulWidget {
+class FlashcardView extends ConsumerStatefulWidget {
   final Flashcard card;
   final bool isFlipped;
   final bool isReversed;
@@ -29,10 +32,10 @@ class FlashcardView extends StatefulWidget {
   });
 
   @override
-  State<FlashcardView> createState() => _FlashcardViewState();
+  ConsumerState<FlashcardView> createState() => _FlashcardViewState();
 }
 
-class _FlashcardViewState extends State<FlashcardView>
+class _FlashcardViewState extends ConsumerState<FlashcardView>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
@@ -49,11 +52,14 @@ class _FlashcardViewState extends State<FlashcardView>
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
     _tts = FlutterTts();
-    _configureGermanTts();
+    _configureTts();
   }
 
-  Future<void> _configureGermanTts() async {
-    await _tts.setLanguage('de-DE');
+  Future<void> _configureTts() async {
+    final settings = ref.read(settingsProvider).valueOrNull;
+    final langCode = settings?.targetLanguage ?? 'de';
+    final locale = SupportedLanguage.fromCode(langCode).ttsLocale;
+    await _tts.setLanguage(locale);
     await _tts.setPitch(1.0);
     await _tts.setSpeechRate(0.45);
   }
@@ -80,15 +86,15 @@ class _FlashcardViewState extends State<FlashcardView>
     super.dispose();
   }
 
-  String _germanSpeechText() {
+  String _targetSpeechText() {
     final base = widget.card.german.trim();
     if (base.isEmpty) return '';
     if (widget.card.article == Article.none) return base;
     return '${widget.card.article.displayLabel} $base';
   }
 
-  Future<void> _speakGerman() async {
-    final text = _germanSpeechText();
+  Future<void> _speakTarget() async {
+    final text = _targetSpeechText();
     if (text.isEmpty) return;
     await _tts.stop();
     await _tts.speak(text);
@@ -96,6 +102,9 @@ class _FlashcardViewState extends State<FlashcardView>
 
   @override
   Widget build(BuildContext context) {
+    final settings = ref.watch(settingsProvider).valueOrNull;
+    final useArabicTargetStyle = (settings?.targetLanguage ?? 'de') == 'ar';
+
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
@@ -121,8 +130,10 @@ class _FlashcardViewState extends State<FlashcardView>
                         card: widget.card,
                         reverse: widget.isReversed,
                         isPreview: widget.isPreview,
-                        showSpeakGerman: !widget.isReversed,
-                        onSpeakGerman: _speakGerman,
+                        showSpeakTarget: !widget.isReversed,
+                        onSpeakTarget: _speakTarget,
+                        deckName: widget.deckName,
+                        useArabicTargetStyle: useArabicTargetStyle,
                       )
                     : Transform(
                         transform: Matrix4.identity()..rotateY(3.14159),
@@ -131,8 +142,10 @@ class _FlashcardViewState extends State<FlashcardView>
                           card: widget.card,
                           reverse: widget.isReversed,
                           isPreview: widget.isPreview,
-                          showSpeakGerman: widget.isReversed,
-                          onSpeakGerman: _speakGerman,
+                          showSpeakTarget: widget.isReversed,
+                          onSpeakTarget: _speakTarget,
+                          deckName: widget.deckName,
+                          useArabicTargetStyle: useArabicTargetStyle,
                         ),
                       ),
               ),
@@ -180,14 +193,18 @@ class _FrontFace extends StatelessWidget {
   final Flashcard card;
   final bool reverse;
   final bool isPreview;
-  final bool showSpeakGerman;
-  final VoidCallback onSpeakGerman;
+  final bool showSpeakTarget;
+  final VoidCallback onSpeakTarget;
+  final String? deckName;
+  final bool useArabicTargetStyle;
   const _FrontFace({
     required this.card,
     required this.reverse,
     required this.isPreview,
-    required this.showSpeakGerman,
-    required this.onSpeakGerman,
+    required this.showSpeakTarget,
+    required this.onSpeakTarget,
+    this.deckName,
+    required this.useArabicTargetStyle,
   });
 
   @override
@@ -199,6 +216,7 @@ class _FrontFace extends StatelessWidget {
     final articleColor = card.article != Article.none
         ? AppColors.articleColor(card.article)
         : AppColors.primary;
+    final showingTargetSide = !reverse;
 
     return Container(
       width: double.infinity,
@@ -233,11 +251,17 @@ class _FrontFace extends StatelessWidget {
                 width: double.infinity,
                 child: Text(
                   reverse ? card.english : card.german,
-                  style: TextStyle(
-                    fontSize: reverse ? 34 : 32,
-                    fontWeight: FontWeight.w800,
-                    color: articleColor,
-                    letterSpacing: -0.2,
+                  textDirection: showingTargetSide && useArabicTargetStyle
+                      ? TextDirection.rtl
+                      : null,
+                  style: _withArabicTargetFallback(
+                    TextStyle(
+                      fontSize: reverse ? 34 : 32,
+                      fontWeight: FontWeight.w800,
+                      color: articleColor,
+                      letterSpacing: -0.2,
+                    ),
+                    enable: showingTargetSide && useArabicTargetStyle,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -266,12 +290,18 @@ class _FrontFace extends StatelessWidget {
               ],
               const SizedBox(height: 20),
               MemoryStageBadge(stage: card.memoryStage),
-              if (showSpeakGerman) ...[
+              if (showSpeakTarget) ...[
                 const SizedBox(height: 12),
-                _SpeakGermanButton(onTap: onSpeakGerman),
+                _SpeakTargetButton(onTap: onSpeakTarget),
               ],
             ],
           ),
+          if ((deckName ?? '').trim().isNotEmpty)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: _DeckNameBadge(deckName: deckName!.trim()),
+            ),
         ],
       ),
     );
@@ -284,14 +314,18 @@ class _BackFace extends StatelessWidget {
   final Flashcard card;
   final bool reverse;
   final bool isPreview;
-  final bool showSpeakGerman;
-  final VoidCallback onSpeakGerman;
+  final bool showSpeakTarget;
+  final VoidCallback onSpeakTarget;
+  final String? deckName;
+  final bool useArabicTargetStyle;
   const _BackFace({
     required this.card,
     required this.reverse,
     required this.isPreview,
-    required this.showSpeakGerman,
-    required this.onSpeakGerman,
+    required this.showSpeakTarget,
+    required this.onSpeakTarget,
+    this.deckName,
+    required this.useArabicTargetStyle,
   });
 
   @override
@@ -301,6 +335,7 @@ class _BackFace extends StatelessWidget {
         ? colorScheme.surfaceContainerLow
         : colorScheme.surface;
     final primary = colorScheme.primary;
+    final showingTargetSide = reverse;
 
     return Container(
       width: double.infinity,
@@ -326,79 +361,141 @@ class _BackFace extends StatelessWidget {
         builder: (context, constraints) => SingleChildScrollView(
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Stack(
               children: [
-                SizedBox(
-                  height: constraints.maxHeight * 0.4,
-                  child: Center(
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: Text(
-                        reverse ? card.german : card.english,
-                        style: TextStyle(
-                          fontSize: reverse ? 30 : 32,
-                          fontWeight: FontWeight.w700,
-                          color: colorScheme.onSurface,
-                          letterSpacing: -0.3,
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      height: constraints.maxHeight * 0.4,
+                      child: Center(
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: Text(
+                            reverse ? card.german : card.english,
+                            textDirection: showingTargetSide && useArabicTargetStyle
+                                ? TextDirection.rtl
+                                : null,
+                            style: _withArabicTargetFallback(
+                              TextStyle(
+                                fontSize: reverse ? 30 : 32,
+                                fontWeight: FontWeight.w700,
+                                color: colorScheme.onSurface,
+                                letterSpacing: -0.3,
+                              ),
+                              enable: showingTargetSide && useArabicTargetStyle,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ),
-                  ),
+                    Container(
+                      margin: const EdgeInsets.symmetric(vertical: 16),
+                      height: 1.5,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.transparent,
+                            primary.withValues(alpha: 0.3),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (!reverse) _GrammarDetails(card: card),
+                    if ((reverse && card.exampleEn.isNotEmpty) ||
+                        (!reverse && card.exampleDe.isNotEmpty)) ...[
+                      const SizedBox(height: 16),
+                      _ExampleBlock(
+                        de: reverse ? card.exampleEn : card.exampleDe,
+                        en: reverse ? card.exampleDe : card.exampleEn,
+                      ),
+                    ],
+                    if (card.notes.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: primary.withValues(alpha: 0.12),
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Text(
+                          card.notes,
+                          style: TextStyle(
+                            color: colorScheme.onSurfaceVariant,
+                            fontSize: 13,
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (showSpeakTarget) ...[
+                      const SizedBox(height: 16),
+                      _SpeakTargetButton(onTap: onSpeakTarget),
+                    ],
+                  ],
                 ),
-                Container(
-                  margin: const EdgeInsets.symmetric(vertical: 16),
-                  height: 1.5,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.transparent,
-                        primary.withValues(alpha: 0.3),
-                        Colors.transparent,
-                      ],
-                    ),
+                if ((deckName ?? '').trim().isNotEmpty)
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: _DeckNameBadge(deckName: deckName!.trim()),
                   ),
-                ),
-                const SizedBox(height: 12),
-                if (!reverse) _GrammarDetails(card: card),
-                if ((reverse && card.exampleEn.isNotEmpty) ||
-                    (!reverse && card.exampleDe.isNotEmpty)) ...[
-                  const SizedBox(height: 16),
-                  _ExampleBlock(
-                    de: reverse ? card.exampleEn : card.exampleDe,
-                    en: reverse ? card.exampleDe : card.exampleEn,
-                  ),
-                ],
-                if (card.notes.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: primary.withValues(alpha: 0.12),
-                        width: 1.2,
-                      ),
-                    ),
-                    child: Text(
-                      card.notes,
-                      style: TextStyle(
-                        color: colorScheme.onSurfaceVariant,
-                        fontSize: 13,
-                        height: 1.5,
-                      ),
-                    ),
-                  ),
-                ],
-                if (showSpeakGerman) ...[
-                  const SizedBox(height: 16),
-                  _SpeakGermanButton(onTap: onSpeakGerman),
-                ],
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+TextStyle _withArabicTargetFallback(TextStyle base, {required bool enable}) {
+  if (!enable) return base;
+  return base.copyWith(
+    fontFamilyFallback: const [
+      'Noto Naskh Arabic',
+      'Noto Sans Arabic',
+      'Droid Arabic Naskh',
+      'Geeza Pro',
+      'Tahoma',
+      'Arial',
+    ],
+    height: (base.height ?? 1.2) * 1.15,
+  );
+}
+
+class _DeckNameBadge extends StatelessWidget {
+  final String deckName;
+  const _DeckNameBadge({required this.deckName});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 160),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+          width: 1,
+        ),
+      ),
+      child: Text(
+        deckName,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: colorScheme.onSurfaceVariant,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -516,10 +613,10 @@ class _ExampleBlock extends StatelessWidget {
   }
 }
 
-class _SpeakGermanButton extends StatelessWidget {
+class _SpeakTargetButton extends StatelessWidget {
   final VoidCallback onTap;
 
-  const _SpeakGermanButton({required this.onTap});
+  const _SpeakTargetButton({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
