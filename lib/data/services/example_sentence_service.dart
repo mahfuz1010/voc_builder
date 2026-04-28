@@ -6,6 +6,11 @@ class ExampleSentenceService {
 
   static const String _apiHost = 'api.tatoeba.org';
   static const String _apiPath = '/unstable/sentences';
+  static final RegExp _leadingGermanArticlePattern = RegExp(
+    r'^(der|die|das)\s+',
+    caseSensitive: false,
+  );
+  static final RegExp _lookupSeparatorPattern = RegExp(r'\s*(?:,|/|;)\s*');
 
   /// Fetches a random sentence in [tatoebaLangCode] (3-letter ISO 639-3 code,
   /// e.g. 'deu' for German, 'fra' for French) that contains [word].
@@ -13,7 +18,7 @@ class ExampleSentenceService {
     String word, {
     String tatoebaLangCode = 'deu',
   }) async {
-    final w = word.trim();
+    final w = _normalizeLookupInput(word);
     if (w.isEmpty) return '';
 
     final uri = Uri.https(_apiHost, _apiPath, {
@@ -62,6 +67,13 @@ class ExampleSentenceService {
         .split(RegExp(r'[^a-zA-Z\u00C0-\u017F]+'))
         .where((t) => t.isNotEmpty);
     return tokens.contains(normalizedWord);
+  }
+
+  static String _normalizeLookupInput(String value) {
+    final trimmed = value.trim().replaceAll(RegExp(r'\s+'), ' ');
+    final withoutArticle = trimmed.replaceFirst(_leadingGermanArticlePattern, '').trim();
+    final firstSegment = withoutArticle.split(_lookupSeparatorPattern).first.trim();
+    return firstSegment;
   }
 
 }

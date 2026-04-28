@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../../core/enums/article.dart';
@@ -5,6 +6,7 @@ import '../../core/enums/memory_stage.dart';
 import '../../core/enums/review_rating.dart';
 import '../../core/enums/word_type.dart';
 import '../../domain/entities/flashcard.dart';
+import '../../domain/entities/word_info.dart';
 import '../../domain/repositories/card_repository.dart';
 import '../../domain/usecases/review/srs_algorithm.dart';
 import '../database/app_database.dart';
@@ -14,6 +16,32 @@ class CardRepositoryImpl implements CardRepository {
   const CardRepositoryImpl(this._db);
 
   // ── Mapping ──────────────────────────────────────────────────────────────────
+
+  static WordInfo _parseWordInfo(dynamic row) {
+    try {
+      final synonymsStr = row.synonyms as String? ?? '';
+      final antonymsStr = row.antonyms as String? ?? '';
+      final isFetched = row.wordInfoFetched as bool? ?? false;
+      
+      final synonyms = synonymsStr.isEmpty 
+          ? <String>[] 
+          : List<String>.from(jsonDecode(synonymsStr) as List? ?? []);
+      
+      final antonyms = antonymsStr.isEmpty 
+          ? <String>[] 
+          : List<String>.from(jsonDecode(antonymsStr) as List? ?? []);
+      
+      return WordInfo(
+        synonyms: synonyms,
+        antonyms: antonyms,
+        definition: row.definition as String? ?? '',
+        details: row.definition as String? ?? '',
+        isFetched: isFetched,
+      );
+    } catch (_) {
+      return WordInfo.empty();
+    }
+  }
 
   static Flashcard _fromRow(dynamic row) {
     return Flashcard(
@@ -34,6 +62,7 @@ class CardRepositoryImpl implements CardRepository {
       tags: (row.tags as String? ?? '').isEmpty
           ? []
           : (row.tags as String).split(',').map((t) => t.trim()).toList(),
+      wordInfo: _parseWordInfo(row),
       memoryStage: MemoryStage.fromDbValue(row.memoryStage as int),
       intervalDays: row.intervalDays as int? ?? 0,
       easeFactor: (row.easeFactor as num?)?.toDouble() ?? 2.5,
@@ -60,6 +89,10 @@ class CardRepositoryImpl implements CardRepository {
       superlative: Value(card.superlative),
       notes: Value(card.notes),
       tags: Value(card.tags.join(',')),
+      synonyms: Value(jsonEncode(card.wordInfo.synonyms)),
+      antonyms: Value(jsonEncode(card.wordInfo.antonyms)),
+      definition: Value(card.wordInfo.definition),
+      wordInfoFetched: Value(card.wordInfo.isFetched),
       memoryStage: Value(card.memoryStage.dbValue),
       intervalDays: Value(card.intervalDays),
       easeFactor: Value(card.easeFactor),

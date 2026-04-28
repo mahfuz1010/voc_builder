@@ -7,6 +7,7 @@ import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/supported_languages.dart';
 import '../../../data/services/example_sentence_service.dart';
 import '../../../data/services/translation_service.dart';
+import '../../../data/services/word_info_service.dart';
 import '../../../domain/entities/deck.dart';
 import '../../../domain/entities/flashcard.dart';
 import '../../providers/card_provider.dart';
@@ -220,11 +221,15 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
           return;
         }
 
+        // Fetch word info automatically for new cards
+        final wordInfo = await WordInfoService.fetchWordInfo(_germanCtrl.text.trim());
+
         final card = buildNewCard(
           deckId: _selectedDeckId!,
           german: _germanCtrl.text.trim(),
           english: _englishCtrl.text.trim(),
           notes: _exampleCtrl.text.trim(),
+          wordInfo: wordInfo,
         );
         await ref.read(cardNotifierProvider.notifier).addCard(card);
       }

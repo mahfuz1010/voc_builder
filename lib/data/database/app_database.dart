@@ -37,6 +37,13 @@ class Cards extends Table {
   TextColumn  get superlative => text().withDefault(const Constant(''))();
   TextColumn  get notes       => text().withDefault(const Constant(''))();
   TextColumn  get tags        => text().withDefault(const Constant(''))(); // comma-separated
+  
+  // Word Information
+  TextColumn  get synonyms    => text().withDefault(const Constant(''))(); // JSON array
+  TextColumn  get antonyms    => text().withDefault(const Constant(''))(); // JSON array
+  TextColumn  get definition  => text().withDefault(const Constant(''))();
+  BoolColumn  get wordInfoFetched => boolean().withDefault(const Constant(false))();
+  
   IntColumn   get memoryStage => integer().withDefault(const Constant(0))();
   IntColumn   get intervalDays=> integer().withDefault(const Constant(0))();
   RealColumn  get easeFactor  => real().withDefault(const Constant(2.5))();
@@ -55,7 +62,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -66,6 +73,13 @@ class AppDatabase extends _$AppDatabase {
           if (from < 2) {
             // Add languageCode column to existing decks (default 'de').
             await m.addColumn(decks, decks.languageCode);
+          }
+          if (from < 3) {
+            // Add word info columns to existing cards
+            await m.addColumn(cards, cards.synonyms);
+            await m.addColumn(cards, cards.antonyms);
+            await m.addColumn(cards, cards.definition);
+            await m.addColumn(cards, cards.wordInfoFetched);
           }
         },
       );

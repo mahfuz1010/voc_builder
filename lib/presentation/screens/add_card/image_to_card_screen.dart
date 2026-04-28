@@ -9,6 +9,7 @@ import '../../../core/constants/supported_languages.dart';
 import '../../../core/utils/text_tokenizer.dart';
 import '../../../data/services/image_text_ocr_service.dart';
 import '../../../data/services/translation_service.dart';
+import '../../../data/services/word_info_service.dart';
 import '../../providers/card_provider.dart';
 import '../../providers/deck_provider.dart';
 import '../../providers/settings_provider.dart';
@@ -89,8 +90,15 @@ class _ImageToCardScreenState extends ConsumerState<ImageToCardScreen> {
       final words = _tokens.where(_selected.contains).toList();
       final settings = ref.read(settingsProvider).valueOrNull;
       final nativeCode = settings?.nativeLanguage ?? 'en';
+      
+      // Translate words
       final translations = await Future.wait(
         words.map((w) => TranslationService.translate(w, to: nativeCode)),
+      );
+
+      // Fetch word info for each word in parallel
+      final wordInfos = await Future.wait(
+        words.map((w) => WordInfoService.fetchWordInfo(w)),
       );
 
       final cards = List.generate(words.length, (i) => buildNewCard(
@@ -98,6 +106,7 @@ class _ImageToCardScreenState extends ConsumerState<ImageToCardScreen> {
         german: words[i],
         english: translations[i],
         notes: translations[i].isEmpty ? 'Auto-translation failed' : '',
+        wordInfo: wordInfos[i],
       ));
 
       await ref.read(cardNotifierProvider.notifier).addAll(cards);

@@ -36,7 +36,7 @@ class AppStrings {
   static const String partizipII   = 'Partizip II';
   static const String comparative  = 'Comparative';
   static const String superlative  = 'Superlative';
-  static const String notes        = 'Notes';
+  static const String notes        = 'Example';
   static const String tags         = 'Tags (comma separated)';
   static const String selectDeck   = 'Select Deck';
   static const String saveCard     = 'Save Card';

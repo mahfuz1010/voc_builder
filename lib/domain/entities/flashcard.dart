@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import '../../core/enums/article.dart';
 import '../../core/enums/memory_stage.dart';
 import '../../core/enums/word_type.dart';
+import 'word_info.dart';
 
 class Flashcard extends Equatable {
   final String id;
@@ -28,6 +29,9 @@ class Flashcard extends Equatable {
   final String notes;
   final List<String> tags;
 
+  // Word Info
+  final WordInfo wordInfo;
+
   // SRS
   final MemoryStage memoryStage;
   final int intervalDays;
@@ -53,6 +57,7 @@ class Flashcard extends Equatable {
     this.superlative = '',
     this.notes = '',
     this.tags = const [],
+    this.wordInfo = const WordInfo(),
     this.memoryStage = MemoryStage.newCard,
     this.intervalDays = 0,
     this.easeFactor = 2.5,
@@ -88,6 +93,7 @@ class Flashcard extends Equatable {
     String? superlative,
     String? notes,
     List<String>? tags,
+    WordInfo? wordInfo,
     MemoryStage? memoryStage,
     int? intervalDays,
     double? easeFactor,
@@ -111,6 +117,7 @@ class Flashcard extends Equatable {
       superlative: superlative ?? this.superlative,
       notes: notes ?? this.notes,
       tags: tags ?? this.tags,
+      wordInfo: wordInfo ?? this.wordInfo,
       memoryStage: memoryStage ?? this.memoryStage,
       intervalDays: intervalDays ?? this.intervalDays,
       easeFactor: easeFactor ?? this.easeFactor,

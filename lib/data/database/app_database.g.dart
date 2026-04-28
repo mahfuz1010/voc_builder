@@ -485,6 +485,57 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, Card> {
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _synonymsMeta = const VerificationMeta(
+    'synonyms',
+  );
+  @override
+  late final GeneratedColumn<String> synonyms = GeneratedColumn<String>(
+    'synonyms',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _antonymsMeta = const VerificationMeta(
+    'antonyms',
+  );
+  @override
+  late final GeneratedColumn<String> antonyms = GeneratedColumn<String>(
+    'antonyms',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _definitionMeta = const VerificationMeta(
+    'definition',
+  );
+  @override
+  late final GeneratedColumn<String> definition = GeneratedColumn<String>(
+    'definition',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _wordInfoFetchedMeta = const VerificationMeta(
+    'wordInfoFetched',
+  );
+  @override
+  late final GeneratedColumn<bool> wordInfoFetched = GeneratedColumn<bool>(
+    'word_info_fetched',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("word_info_fetched" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _memoryStageMeta = const VerificationMeta(
     'memoryStage',
   );
@@ -572,6 +623,10 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, Card> {
     superlative,
     notes,
     tags,
+    synonyms,
+    antonyms,
+    definition,
+    wordInfoFetched,
     memoryStage,
     intervalDays,
     easeFactor,
@@ -698,6 +753,33 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, Card> {
         tags.isAcceptableOrUnknown(data['tags']!, _tagsMeta),
       );
     }
+    if (data.containsKey('synonyms')) {
+      context.handle(
+        _synonymsMeta,
+        synonyms.isAcceptableOrUnknown(data['synonyms']!, _synonymsMeta),
+      );
+    }
+    if (data.containsKey('antonyms')) {
+      context.handle(
+        _antonymsMeta,
+        antonyms.isAcceptableOrUnknown(data['antonyms']!, _antonymsMeta),
+      );
+    }
+    if (data.containsKey('definition')) {
+      context.handle(
+        _definitionMeta,
+        definition.isAcceptableOrUnknown(data['definition']!, _definitionMeta),
+      );
+    }
+    if (data.containsKey('word_info_fetched')) {
+      context.handle(
+        _wordInfoFetchedMeta,
+        wordInfoFetched.isAcceptableOrUnknown(
+          data['word_info_fetched']!,
+          _wordInfoFetchedMeta,
+        ),
+      );
+    }
     if (data.containsKey('memory_stage')) {
       context.handle(
         _memoryStageMeta,
@@ -816,6 +898,22 @@ class $CardsTable extends Cards with TableInfo<$CardsTable, Card> {
         DriftSqlType.string,
         data['${effectivePrefix}tags'],
       )!,
+      synonyms: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}synonyms'],
+      )!,
+      antonyms: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}antonyms'],
+      )!,
+      definition: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}definition'],
+      )!,
+      wordInfoFetched: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}word_info_fetched'],
+      )!,
       memoryStage: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}memory_stage'],
@@ -865,6 +963,10 @@ class Card extends DataClass implements Insertable<Card> {
   final String superlative;
   final String notes;
   final String tags;
+  final String synonyms;
+  final String antonyms;
+  final String definition;
+  final bool wordInfoFetched;
   final int memoryStage;
   final int intervalDays;
   final double easeFactor;
@@ -887,6 +989,10 @@ class Card extends DataClass implements Insertable<Card> {
     required this.superlative,
     required this.notes,
     required this.tags,
+    required this.synonyms,
+    required this.antonyms,
+    required this.definition,
+    required this.wordInfoFetched,
     required this.memoryStage,
     required this.intervalDays,
     required this.easeFactor,
@@ -912,6 +1018,10 @@ class Card extends DataClass implements Insertable<Card> {
     map['superlative'] = Variable<String>(superlative);
     map['notes'] = Variable<String>(notes);
     map['tags'] = Variable<String>(tags);
+    map['synonyms'] = Variable<String>(synonyms);
+    map['antonyms'] = Variable<String>(antonyms);
+    map['definition'] = Variable<String>(definition);
+    map['word_info_fetched'] = Variable<bool>(wordInfoFetched);
     map['memory_stage'] = Variable<int>(memoryStage);
     map['interval_days'] = Variable<int>(intervalDays);
     map['ease_factor'] = Variable<double>(easeFactor);
@@ -938,6 +1048,10 @@ class Card extends DataClass implements Insertable<Card> {
       superlative: Value(superlative),
       notes: Value(notes),
       tags: Value(tags),
+      synonyms: Value(synonyms),
+      antonyms: Value(antonyms),
+      definition: Value(definition),
+      wordInfoFetched: Value(wordInfoFetched),
       memoryStage: Value(memoryStage),
       intervalDays: Value(intervalDays),
       easeFactor: Value(easeFactor),
@@ -968,6 +1082,10 @@ class Card extends DataClass implements Insertable<Card> {
       superlative: serializer.fromJson<String>(json['superlative']),
       notes: serializer.fromJson<String>(json['notes']),
       tags: serializer.fromJson<String>(json['tags']),
+      synonyms: serializer.fromJson<String>(json['synonyms']),
+      antonyms: serializer.fromJson<String>(json['antonyms']),
+      definition: serializer.fromJson<String>(json['definition']),
+      wordInfoFetched: serializer.fromJson<bool>(json['wordInfoFetched']),
       memoryStage: serializer.fromJson<int>(json['memoryStage']),
       intervalDays: serializer.fromJson<int>(json['intervalDays']),
       easeFactor: serializer.fromJson<double>(json['easeFactor']),
@@ -995,6 +1113,10 @@ class Card extends DataClass implements Insertable<Card> {
       'superlative': serializer.toJson<String>(superlative),
       'notes': serializer.toJson<String>(notes),
       'tags': serializer.toJson<String>(tags),
+      'synonyms': serializer.toJson<String>(synonyms),
+      'antonyms': serializer.toJson<String>(antonyms),
+      'definition': serializer.toJson<String>(definition),
+      'wordInfoFetched': serializer.toJson<bool>(wordInfoFetched),
       'memoryStage': serializer.toJson<int>(memoryStage),
       'intervalDays': serializer.toJson<int>(intervalDays),
       'easeFactor': serializer.toJson<double>(easeFactor),
@@ -1020,6 +1142,10 @@ class Card extends DataClass implements Insertable<Card> {
     String? superlative,
     String? notes,
     String? tags,
+    String? synonyms,
+    String? antonyms,
+    String? definition,
+    bool? wordInfoFetched,
     int? memoryStage,
     int? intervalDays,
     double? easeFactor,
@@ -1042,6 +1168,10 @@ class Card extends DataClass implements Insertable<Card> {
     superlative: superlative ?? this.superlative,
     notes: notes ?? this.notes,
     tags: tags ?? this.tags,
+    synonyms: synonyms ?? this.synonyms,
+    antonyms: antonyms ?? this.antonyms,
+    definition: definition ?? this.definition,
+    wordInfoFetched: wordInfoFetched ?? this.wordInfoFetched,
     memoryStage: memoryStage ?? this.memoryStage,
     intervalDays: intervalDays ?? this.intervalDays,
     easeFactor: easeFactor ?? this.easeFactor,
@@ -1074,6 +1204,14 @@ class Card extends DataClass implements Insertable<Card> {
           : this.superlative,
       notes: data.notes.present ? data.notes.value : this.notes,
       tags: data.tags.present ? data.tags.value : this.tags,
+      synonyms: data.synonyms.present ? data.synonyms.value : this.synonyms,
+      antonyms: data.antonyms.present ? data.antonyms.value : this.antonyms,
+      definition: data.definition.present
+          ? data.definition.value
+          : this.definition,
+      wordInfoFetched: data.wordInfoFetched.present
+          ? data.wordInfoFetched.value
+          : this.wordInfoFetched,
       memoryStage: data.memoryStage.present
           ? data.memoryStage.value
           : this.memoryStage,
@@ -1111,6 +1249,10 @@ class Card extends DataClass implements Insertable<Card> {
           ..write('superlative: $superlative, ')
           ..write('notes: $notes, ')
           ..write('tags: $tags, ')
+          ..write('synonyms: $synonyms, ')
+          ..write('antonyms: $antonyms, ')
+          ..write('definition: $definition, ')
+          ..write('wordInfoFetched: $wordInfoFetched, ')
           ..write('memoryStage: $memoryStage, ')
           ..write('intervalDays: $intervalDays, ')
           ..write('easeFactor: $easeFactor, ')
@@ -1138,6 +1280,10 @@ class Card extends DataClass implements Insertable<Card> {
     superlative,
     notes,
     tags,
+    synonyms,
+    antonyms,
+    definition,
+    wordInfoFetched,
     memoryStage,
     intervalDays,
     easeFactor,
@@ -1164,6 +1310,10 @@ class Card extends DataClass implements Insertable<Card> {
           other.superlative == this.superlative &&
           other.notes == this.notes &&
           other.tags == this.tags &&
+          other.synonyms == this.synonyms &&
+          other.antonyms == this.antonyms &&
+          other.definition == this.definition &&
+          other.wordInfoFetched == this.wordInfoFetched &&
           other.memoryStage == this.memoryStage &&
           other.intervalDays == this.intervalDays &&
           other.easeFactor == this.easeFactor &&
@@ -1188,6 +1338,10 @@ class CardsCompanion extends UpdateCompanion<Card> {
   final Value<String> superlative;
   final Value<String> notes;
   final Value<String> tags;
+  final Value<String> synonyms;
+  final Value<String> antonyms;
+  final Value<String> definition;
+  final Value<bool> wordInfoFetched;
   final Value<int> memoryStage;
   final Value<int> intervalDays;
   final Value<double> easeFactor;
@@ -1211,6 +1365,10 @@ class CardsCompanion extends UpdateCompanion<Card> {
     this.superlative = const Value.absent(),
     this.notes = const Value.absent(),
     this.tags = const Value.absent(),
+    this.synonyms = const Value.absent(),
+    this.antonyms = const Value.absent(),
+    this.definition = const Value.absent(),
+    this.wordInfoFetched = const Value.absent(),
     this.memoryStage = const Value.absent(),
     this.intervalDays = const Value.absent(),
     this.easeFactor = const Value.absent(),
@@ -1235,6 +1393,10 @@ class CardsCompanion extends UpdateCompanion<Card> {
     this.superlative = const Value.absent(),
     this.notes = const Value.absent(),
     this.tags = const Value.absent(),
+    this.synonyms = const Value.absent(),
+    this.antonyms = const Value.absent(),
+    this.definition = const Value.absent(),
+    this.wordInfoFetched = const Value.absent(),
     this.memoryStage = const Value.absent(),
     this.intervalDays = const Value.absent(),
     this.easeFactor = const Value.absent(),
@@ -1264,6 +1426,10 @@ class CardsCompanion extends UpdateCompanion<Card> {
     Expression<String>? superlative,
     Expression<String>? notes,
     Expression<String>? tags,
+    Expression<String>? synonyms,
+    Expression<String>? antonyms,
+    Expression<String>? definition,
+    Expression<bool>? wordInfoFetched,
     Expression<int>? memoryStage,
     Expression<int>? intervalDays,
     Expression<double>? easeFactor,
@@ -1288,6 +1454,10 @@ class CardsCompanion extends UpdateCompanion<Card> {
       if (superlative != null) 'superlative': superlative,
       if (notes != null) 'notes': notes,
       if (tags != null) 'tags': tags,
+      if (synonyms != null) 'synonyms': synonyms,
+      if (antonyms != null) 'antonyms': antonyms,
+      if (definition != null) 'definition': definition,
+      if (wordInfoFetched != null) 'word_info_fetched': wordInfoFetched,
       if (memoryStage != null) 'memory_stage': memoryStage,
       if (intervalDays != null) 'interval_days': intervalDays,
       if (easeFactor != null) 'ease_factor': easeFactor,
@@ -1314,6 +1484,10 @@ class CardsCompanion extends UpdateCompanion<Card> {
     Value<String>? superlative,
     Value<String>? notes,
     Value<String>? tags,
+    Value<String>? synonyms,
+    Value<String>? antonyms,
+    Value<String>? definition,
+    Value<bool>? wordInfoFetched,
     Value<int>? memoryStage,
     Value<int>? intervalDays,
     Value<double>? easeFactor,
@@ -1338,6 +1512,10 @@ class CardsCompanion extends UpdateCompanion<Card> {
       superlative: superlative ?? this.superlative,
       notes: notes ?? this.notes,
       tags: tags ?? this.tags,
+      synonyms: synonyms ?? this.synonyms,
+      antonyms: antonyms ?? this.antonyms,
+      definition: definition ?? this.definition,
+      wordInfoFetched: wordInfoFetched ?? this.wordInfoFetched,
       memoryStage: memoryStage ?? this.memoryStage,
       intervalDays: intervalDays ?? this.intervalDays,
       easeFactor: easeFactor ?? this.easeFactor,
@@ -1396,6 +1574,18 @@ class CardsCompanion extends UpdateCompanion<Card> {
     if (tags.present) {
       map['tags'] = Variable<String>(tags.value);
     }
+    if (synonyms.present) {
+      map['synonyms'] = Variable<String>(synonyms.value);
+    }
+    if (antonyms.present) {
+      map['antonyms'] = Variable<String>(antonyms.value);
+    }
+    if (definition.present) {
+      map['definition'] = Variable<String>(definition.value);
+    }
+    if (wordInfoFetched.present) {
+      map['word_info_fetched'] = Variable<bool>(wordInfoFetched.value);
+    }
     if (memoryStage.present) {
       map['memory_stage'] = Variable<int>(memoryStage.value);
     }
@@ -1438,6 +1628,10 @@ class CardsCompanion extends UpdateCompanion<Card> {
           ..write('superlative: $superlative, ')
           ..write('notes: $notes, ')
           ..write('tags: $tags, ')
+          ..write('synonyms: $synonyms, ')
+          ..write('antonyms: $antonyms, ')
+          ..write('definition: $definition, ')
+          ..write('wordInfoFetched: $wordInfoFetched, ')
           ..write('memoryStage: $memoryStage, ')
           ..write('intervalDays: $intervalDays, ')
           ..write('easeFactor: $easeFactor, ')
@@ -1756,6 +1950,10 @@ typedef $$CardsTableCreateCompanionBuilder =
       Value<String> superlative,
       Value<String> notes,
       Value<String> tags,
+      Value<String> synonyms,
+      Value<String> antonyms,
+      Value<String> definition,
+      Value<bool> wordInfoFetched,
       Value<int> memoryStage,
       Value<int> intervalDays,
       Value<double> easeFactor,
@@ -1781,6 +1979,10 @@ typedef $$CardsTableUpdateCompanionBuilder =
       Value<String> superlative,
       Value<String> notes,
       Value<String> tags,
+      Value<String> synonyms,
+      Value<String> antonyms,
+      Value<String> definition,
+      Value<bool> wordInfoFetched,
       Value<int> memoryStage,
       Value<int> intervalDays,
       Value<double> easeFactor,
@@ -1887,6 +2089,26 @@ class $$CardsTableFilterComposer extends Composer<_$AppDatabase, $CardsTable> {
 
   ColumnFilters<String> get tags => $composableBuilder(
     column: $table.tags,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get synonyms => $composableBuilder(
+    column: $table.synonyms,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get antonyms => $composableBuilder(
+    column: $table.antonyms,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get definition => $composableBuilder(
+    column: $table.definition,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get wordInfoFetched => $composableBuilder(
+    column: $table.wordInfoFetched,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2023,6 +2245,26 @@ class $$CardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get synonyms => $composableBuilder(
+    column: $table.synonyms,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get antonyms => $composableBuilder(
+    column: $table.antonyms,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get definition => $composableBuilder(
+    column: $table.definition,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get wordInfoFetched => $composableBuilder(
+    column: $table.wordInfoFetched,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get memoryStage => $composableBuilder(
     column: $table.memoryStage,
     builder: (column) => ColumnOrderings(column),
@@ -2136,6 +2378,22 @@ class $$CardsTableAnnotationComposer
   GeneratedColumn<String> get tags =>
       $composableBuilder(column: $table.tags, builder: (column) => column);
 
+  GeneratedColumn<String> get synonyms =>
+      $composableBuilder(column: $table.synonyms, builder: (column) => column);
+
+  GeneratedColumn<String> get antonyms =>
+      $composableBuilder(column: $table.antonyms, builder: (column) => column);
+
+  GeneratedColumn<String> get definition => $composableBuilder(
+    column: $table.definition,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get wordInfoFetched => $composableBuilder(
+    column: $table.wordInfoFetched,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get memoryStage => $composableBuilder(
     column: $table.memoryStage,
     builder: (column) => column,
@@ -2231,6 +2489,10 @@ class $$CardsTableTableManager
                 Value<String> superlative = const Value.absent(),
                 Value<String> notes = const Value.absent(),
                 Value<String> tags = const Value.absent(),
+                Value<String> synonyms = const Value.absent(),
+                Value<String> antonyms = const Value.absent(),
+                Value<String> definition = const Value.absent(),
+                Value<bool> wordInfoFetched = const Value.absent(),
                 Value<int> memoryStage = const Value.absent(),
                 Value<int> intervalDays = const Value.absent(),
                 Value<double> easeFactor = const Value.absent(),
@@ -2254,6 +2516,10 @@ class $$CardsTableTableManager
                 superlative: superlative,
                 notes: notes,
                 tags: tags,
+                synonyms: synonyms,
+                antonyms: antonyms,
+                definition: definition,
+                wordInfoFetched: wordInfoFetched,
                 memoryStage: memoryStage,
                 intervalDays: intervalDays,
                 easeFactor: easeFactor,
@@ -2279,6 +2545,10 @@ class $$CardsTableTableManager
                 Value<String> superlative = const Value.absent(),
                 Value<String> notes = const Value.absent(),
                 Value<String> tags = const Value.absent(),
+                Value<String> synonyms = const Value.absent(),
+                Value<String> antonyms = const Value.absent(),
+                Value<String> definition = const Value.absent(),
+                Value<bool> wordInfoFetched = const Value.absent(),
                 Value<int> memoryStage = const Value.absent(),
                 Value<int> intervalDays = const Value.absent(),
                 Value<double> easeFactor = const Value.absent(),
@@ -2302,6 +2572,10 @@ class $$CardsTableTableManager
                 superlative: superlative,
                 notes: notes,
                 tags: tags,
+                synonyms: synonyms,
+                antonyms: antonyms,
+                definition: definition,
+                wordInfoFetched: wordInfoFetched,
                 memoryStage: memoryStage,
                 intervalDays: intervalDays,
                 easeFactor: easeFactor,

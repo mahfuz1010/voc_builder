@@ -6,6 +6,7 @@ import '../../core/enums/memory_stage.dart';
 import '../../core/enums/review_rating.dart';
 import '../../core/enums/word_type.dart';
 import '../../domain/entities/flashcard.dart';
+import '../../domain/entities/word_info.dart';
 import 'repository_providers.dart';
 import 'profile_provider.dart';
 
@@ -152,6 +153,7 @@ Flashcard buildNewCard({
   String superlative = '',
   String notes = '',
   List<String> tags = const [],
+  WordInfo? wordInfo,
 }) {
   return Flashcard(
     id: const Uuid().v4(),
@@ -169,6 +171,7 @@ Flashcard buildNewCard({
     superlative: superlative,
     notes: notes,
     tags: tags,
+    wordInfo: wordInfo ?? const WordInfo(),
     memoryStage: MemoryStage.newCard,
     intervalDays: 0,
     easeFactor: 2.5,

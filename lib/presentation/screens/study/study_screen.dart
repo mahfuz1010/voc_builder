@@ -8,6 +8,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/supported_languages.dart';
 import '../../../core/enums/review_rating.dart';
+import '../../../data/services/word_info_service.dart';
 import '../../../domain/entities/flashcard.dart';
 import '../../providers/card_provider.dart';
 import '../../providers/deck_provider.dart';
@@ -45,6 +46,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
   double _swipeTargetX = 0;
   double _swipeTargetY = 0;
   bool _isSwipeAnimating = false;
+  bool _loadingWordInfo = false;
 
   @override
   void initState() {
@@ -234,6 +236,45 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
     if (!mounted) return;
 
     await _refreshEditedCard(original.id);
+  }
+
+  Future<void> _fetchWordInfoForCurrentCard() async {
+    if (_queue.isEmpty || _loadingWordInfo) return;
+    final card = _queue[_currentIndex];
+
+    setState(() => _loadingWordInfo = true);
+    try {
+      final fetched = await WordInfoService.fetchWordInfo(card.german);
+      if (!mounted) return;
+
+      if (!fetched.hasData) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No word info found for this word.')),
+        );
+        return;
+      }
+
+      final updated = card.copyWith(wordInfo: fetched);
+      await ref.read(cardRepositoryProvider).update(updated);
+      if (!mounted) return;
+
+      setState(() {
+        _queue[_currentIndex] = updated;
+        for (var i = 0; i < _baseSessionCards.length; i++) {
+          if (_baseSessionCards[i].id == updated.id) {
+            _baseSessionCards[i] = updated;
+          }
+        }
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Word info updated.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _loadingWordInfo = false);
+      }
+    }
   }
 
   Future<void> _refreshEditedCard(String cardId) async {
@@ -488,6 +529,8 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
                 isReversed: _reverseDirection,
                 onTap: _flip,
                 onEdit: _editCard,
+                onInfoTap: _fetchWordInfoForCurrentCard,
+                infoLoading: _loadingWordInfo,
                 deckName: deckName,
               ),
               _buildDragWashOverlay(animatedX),

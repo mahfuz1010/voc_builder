@@ -7,6 +7,7 @@ import '../../../../core/constants/supported_languages.dart';
 import '../../../../core/enums/article.dart';
 import '../../../../core/enums/word_type.dart';
 import '../../../../domain/entities/flashcard.dart';
+import '../../../../domain/entities/word_info.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../widgets/article_badge.dart';
 import '../../../widgets/memory_stage_badge.dart';
@@ -18,6 +19,8 @@ class FlashcardView extends ConsumerStatefulWidget {
   final bool isPreview;
   final VoidCallback onTap;
   final VoidCallback? onEdit;
+  final VoidCallback? onInfoTap;
+  final bool infoLoading;
   final String? deckName;
 
   const FlashcardView({
@@ -28,6 +31,8 @@ class FlashcardView extends ConsumerStatefulWidget {
     this.isPreview = false,
     required this.onTap,
     this.onEdit,
+    this.onInfoTap,
+    this.infoLoading = false,
     this.deckName,
   });
 
@@ -132,6 +137,8 @@ class _FlashcardViewState extends ConsumerState<FlashcardView>
                         isPreview: widget.isPreview,
                         showSpeakTarget: !widget.isReversed,
                         onSpeakTarget: _speakTarget,
+                        onInfoTap: widget.onInfoTap,
+                        infoLoading: widget.infoLoading,
                         deckName: widget.deckName,
                         useArabicTargetStyle: useArabicTargetStyle,
                       )
@@ -144,6 +151,8 @@ class _FlashcardViewState extends ConsumerState<FlashcardView>
                           isPreview: widget.isPreview,
                           showSpeakTarget: widget.isReversed,
                           onSpeakTarget: _speakTarget,
+                          onInfoTap: widget.onInfoTap,
+                          infoLoading: widget.infoLoading,
                           deckName: widget.deckName,
                           useArabicTargetStyle: useArabicTargetStyle,
                         ),
@@ -195,6 +204,8 @@ class _FrontFace extends StatelessWidget {
   final bool isPreview;
   final bool showSpeakTarget;
   final VoidCallback onSpeakTarget;
+  final VoidCallback? onInfoTap;
+  final bool infoLoading;
   final String? deckName;
   final bool useArabicTargetStyle;
   const _FrontFace({
@@ -203,6 +214,8 @@ class _FrontFace extends StatelessWidget {
     required this.isPreview,
     required this.showSpeakTarget,
     required this.onSpeakTarget,
+    this.onInfoTap,
+    required this.infoLoading,
     this.deckName,
     required this.useArabicTargetStyle,
   });
@@ -249,21 +262,37 @@ class _FrontFace extends StatelessWidget {
               ],
               SizedBox(
                 width: double.infinity,
-                child: Text(
-                  reverse ? card.english : card.german,
-                  textDirection: showingTargetSide && useArabicTargetStyle
-                      ? TextDirection.rtl
-                      : null,
-                  style: _withArabicTargetFallback(
-                    TextStyle(
-                      fontSize: reverse ? 34 : 32,
-                      fontWeight: FontWeight.w800,
-                      color: articleColor,
-                      letterSpacing: -0.2,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 40),
+                      child: Text(
+                        reverse ? card.english : card.german,
+                        textDirection: showingTargetSide && useArabicTargetStyle
+                            ? TextDirection.rtl
+                            : null,
+                        style: _withArabicTargetFallback(
+                          TextStyle(
+                            fontSize: reverse ? 34 : 32,
+                            fontWeight: FontWeight.w800,
+                            color: articleColor,
+                            letterSpacing: -0.2,
+                          ),
+                          enable: showingTargetSide && useArabicTargetStyle,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
-                    enable: showingTargetSide && useArabicTargetStyle,
-                  ),
-                  textAlign: TextAlign.center,
+                    Positioned(
+                      right: 0,
+                      child: _InfoIconButton(
+                        hasData: card.wordInfo.hasData,
+                        loading: infoLoading,
+                        onTap: onInfoTap,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               if (!reverse && card.plural.isNotEmpty) ...[
@@ -296,7 +325,7 @@ class _FrontFace extends StatelessWidget {
               ],
             ],
           ),
-          if ((deckName ?? '').trim().isNotEmpty)
+          if ((deckName ?? '').trim().isNotEmpty && !reverse)
             Positioned(
               right: 0,
               bottom: 0,
@@ -316,6 +345,8 @@ class _BackFace extends StatelessWidget {
   final bool isPreview;
   final bool showSpeakTarget;
   final VoidCallback onSpeakTarget;
+  final VoidCallback? onInfoTap;
+  final bool infoLoading;
   final String? deckName;
   final bool useArabicTargetStyle;
   const _BackFace({
@@ -324,6 +355,8 @@ class _BackFace extends StatelessWidget {
     required this.isPreview,
     required this.showSpeakTarget,
     required this.onSpeakTarget,
+    this.onInfoTap,
+    required this.infoLoading,
     this.deckName,
     required this.useArabicTargetStyle,
   });
@@ -364,28 +397,44 @@ class _BackFace extends StatelessWidget {
             child: Stack(
               children: [
                 Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     SizedBox(
-                      height: constraints.maxHeight * 0.4,
+                      height: constraints.maxHeight * 0.25,
                       child: Center(
                         child: SizedBox(
                           width: double.infinity,
-                          child: Text(
-                            reverse ? card.german : card.english,
-                            textDirection: showingTargetSide && useArabicTargetStyle
-                                ? TextDirection.rtl
-                                : null,
-                            style: _withArabicTargetFallback(
-                              TextStyle(
-                                fontSize: reverse ? 30 : 32,
-                                fontWeight: FontWeight.w700,
-                                color: colorScheme.onSurface,
-                                letterSpacing: -0.3,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(right: 40),
+                                child: Text(
+                                  reverse ? card.german : card.english,
+                                  textDirection: showingTargetSide && useArabicTargetStyle
+                                      ? TextDirection.rtl
+                                      : null,
+                                  style: _withArabicTargetFallback(
+                                    TextStyle(
+                                      fontSize: reverse ? 30 : 32,
+                                      fontWeight: FontWeight.w700,
+                                      color: colorScheme.onSurface,
+                                      letterSpacing: -0.3,
+                                    ),
+                                    enable: showingTargetSide && useArabicTargetStyle,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
-                              enable: showingTargetSide && useArabicTargetStyle,
-                            ),
-                            textAlign: TextAlign.center,
+                              Positioned(
+                                right: 0,
+                                child: _InfoIconButton(
+                                  hasData: card.wordInfo.hasData,
+                                  loading: infoLoading,
+                                  onTap: onInfoTap,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -405,34 +454,17 @@ class _BackFace extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     if (!reverse) _GrammarDetails(card: card),
-                    if ((reverse && card.exampleEn.isNotEmpty) ||
-                        (!reverse && card.exampleDe.isNotEmpty)) ...[
+                    // Word Info Display
+                    if (card.wordInfo.hasData ||
+                        (reverse && card.exampleEn.isNotEmpty) ||
+                        (!reverse && card.exampleDe.isNotEmpty) ||
+                        card.notes.isNotEmpty) ...[
                       const SizedBox(height: 16),
-                      _ExampleBlock(
+                      _WordInfoBlock(
+                        wordInfo: card.wordInfo,
                         de: reverse ? card.exampleEn : card.exampleDe,
                         en: reverse ? card.exampleDe : card.exampleEn,
-                      ),
-                    ],
-                    if (card.notes.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: primary.withValues(alpha: 0.12),
-                            width: 1.2,
-                          ),
-                        ),
-                        child: Text(
-                          card.notes,
-                          style: TextStyle(
-                            color: colorScheme.onSurfaceVariant,
-                            fontSize: 13,
-                            height: 1.5,
-                          ),
-                        ),
+                        notes: card.notes,
                       ),
                     ],
                     if (showSpeakTarget) ...[
@@ -441,7 +473,7 @@ class _BackFace extends StatelessWidget {
                     ],
                   ],
                 ),
-                if ((deckName ?? '').trim().isNotEmpty)
+                if ((deckName ?? '').trim().isNotEmpty && reverse)
                   Positioned(
                     right: 0,
                     bottom: 0,
@@ -575,44 +607,6 @@ class _GrammarRow extends StatelessWidget {
   }
 }
 
-class _ExampleBlock extends StatelessWidget {
-  final String de;
-  final String en;
-  const _ExampleBlock({required this.de, required this.en});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            de,
-            style: const TextStyle(
-                color: AppColors.onSurface,
-                fontStyle: FontStyle.italic,
-                fontSize: 14),
-          ),
-          if (en.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              en,
-              style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
 class _SpeakTargetButton extends StatelessWidget {
   final VoidCallback onTap;
 
@@ -624,6 +618,260 @@ class _SpeakTargetButton extends StatelessWidget {
       onPressed: onTap,
       icon: const Icon(Icons.volume_up_rounded),
       label: const Text('Listen'),
+    );
+  }
+}
+
+class _InfoIconButton extends StatelessWidget {
+  final bool hasData;
+  final bool loading;
+  final VoidCallback? onTap;
+
+  const _InfoIconButton({
+    required this.hasData,
+    required this.loading,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: hasData ? 'Refresh word info' : 'Fetch word info',
+      child: InkWell(
+        onTap: loading ? null : onTap,
+        borderRadius: BorderRadius.circular(99),
+        child: Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: hasData
+                ? colorScheme.primary.withValues(alpha: 0.16)
+                : colorScheme.surfaceContainerHighest,
+            border: Border.all(
+              color: colorScheme.outlineVariant,
+              width: 1,
+            ),
+          ),
+          child: Center(
+            child: loading
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    hasData ? Icons.info : Icons.info_outline,
+                    size: 16,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WordInfoBlock extends StatelessWidget {
+  final WordInfo wordInfo;
+  final String de;
+  final String en;
+  final String notes;
+
+  const _WordInfoBlock({
+    required this.wordInfo,
+    this.de = '',
+    this.en = '',
+    this.notes = '',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colorScheme.primary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.primary.withValues(alpha: 0.15),
+          width: 1.2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Definition
+          if (wordInfo.definition.isNotEmpty) ...[
+            Text(
+              'Definition',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: colorScheme.primary,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              wordInfo.definition,
+              style: TextStyle(
+                fontSize: 13,
+                color: colorScheme.onSurface,
+                height: 1.4,
+              ),
+            ),
+          ],
+          
+          // Synonyms
+          if (wordInfo.synonyms.isNotEmpty) ...[
+            if (wordInfo.definition.isNotEmpty) const SizedBox(height: 12),
+            Text(
+              'Synonyms',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: colorScheme.primary,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: wordInfo.synonyms.map((syn) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: colorScheme.primary.withValues(alpha: 0.2),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Text(
+                    syn,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+          
+          // Antonyms
+          if (wordInfo.antonyms.isNotEmpty) ...[
+            if (wordInfo.definition.isNotEmpty || wordInfo.synonyms.isNotEmpty)
+              const SizedBox(height: 12),
+            Text(
+              'Antonyms',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: colorScheme.primary,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: wordInfo.antonyms.map((ant) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: Colors.red.withValues(alpha: 0.2),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Text(
+                    ant,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.red.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+
+          // Examples
+          if (de.isNotEmpty) ...[
+            if (wordInfo.definition.isNotEmpty ||
+                wordInfo.synonyms.isNotEmpty ||
+                wordInfo.antonyms.isNotEmpty)
+              const SizedBox(height: 12),
+            Text(
+              'Example',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: colorScheme.primary,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              de,
+              style: TextStyle(
+                color: colorScheme.onSurface,
+                fontStyle: FontStyle.italic,
+                fontSize: 13,
+                height: 1.35,
+              ),
+            ),
+            if (en.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                en,
+                style: TextStyle(
+                  color: colorScheme.onSurfaceVariant,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ],
+
+          // Notes (legacy examples may be stored here)
+          if (notes.isNotEmpty) ...[
+            if (wordInfo.definition.isNotEmpty ||
+                wordInfo.synonyms.isNotEmpty ||
+                wordInfo.antonyms.isNotEmpty ||
+                de.isNotEmpty)
+              const SizedBox(height: 12),
+            Text(
+              'Example',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: colorScheme.primary,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              notes,
+              style: TextStyle(
+                color: colorScheme.onSurfaceVariant,
+                fontSize: 12,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

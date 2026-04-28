@@ -6,6 +6,7 @@ import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/supported_languages.dart';
 import '../../../core/utils/text_tokenizer.dart';
 import '../../../data/services/translation_service.dart';
+import '../../../data/services/word_info_service.dart';
 import '../../providers/card_provider.dart';
 import '../../providers/deck_provider.dart';
 import '../../providers/settings_provider.dart';
@@ -53,18 +54,27 @@ class _TextToCardScreenState extends ConsumerState<TextToCardScreen> {
       final selectedWords = _tokens.where(_selected.contains).toList();
       final settings = ref.read(settingsProvider).valueOrNull;
       final nativeCode = settings?.nativeLanguage ?? 'en';
+      
+      // Translate words
       final translatedWords = await Future.wait(
         selectedWords.map((w) => TranslationService.translate(w, to: nativeCode)),
+      );
+
+      // Fetch word info for each word in parallel
+      final wordInfos = await Future.wait(
+        selectedWords.map((w) => WordInfoService.fetchWordInfo(w)),
       );
 
       final cards = List.generate(selectedWords.length, (i) {
         final word = selectedWords[i];
         final translated = translatedWords[i];
+        final wordInfo = wordInfos[i];
         return buildNewCard(
           deckId: _deckId!,
           german: word,
           english: translated,
           notes: translated.isEmpty ? 'Auto-translation failed' : '',
+          wordInfo: wordInfo,
         );
       });
 
