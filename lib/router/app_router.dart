@@ -44,7 +44,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: '/onboarding',
-        builder: (_, __) => const LanguageSelectionScreen(),
+        builder: (_, _) => const LanguageSelectionScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) => _MainShell(child: child),

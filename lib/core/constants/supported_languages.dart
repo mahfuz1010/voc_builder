@@ -25,7 +25,7 @@ class SupportedLanguage {
       'zh': 'zh-CN',
       'pt': 'pt-BR',
     };
-    return overrides[code] ?? '${code}-${code.toUpperCase()}';
+    return overrides[code] ?? '$code-${code.toUpperCase()}';
   }
 
   static const List<SupportedLanguage> all = [
