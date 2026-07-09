@@ -1,13 +1,15 @@
-name: vocBuilder CI-CT
+name: Build And Publish APK Artifact
 
 on:
   pull_request:
-    activity_types: closed
-    branches:
-      - main
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   build-apk-and-release:
+    # Build only for merged PRs, or manual trigger.
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     steps:
@@ -35,15 +37,16 @@ jobs:
       - name: Run analyzer
         run: flutter analyze
 
-      - name: Run unit and widget tests
+      - name: Run tests
         run: flutter test
 
-      - name: Build debug APK
-        run: flutter build apk --debug
+      - name: Build release APK
+        run: flutter build apk --release
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: app-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
+          retention-days: 14
