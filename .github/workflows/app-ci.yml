@@ -1,10 +1,8 @@
 name: vocBuilder CI-CT
 
 on:
-  push:
-    branches:
-      - 'dev-*'
-      - 'feature-*'
+  pull_request:
+    activity_types: [opened, synchronize, reopened]
 
 jobs:
   test-and-build:
@@ -37,3 +35,6 @@ jobs:
 
       - name: Run unit and widget tests
         run: flutter test
+
+      - name: Build debug APK
+        run: flutter build apk --debug
