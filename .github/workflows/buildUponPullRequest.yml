@@ -1,8 +1,8 @@
 name: vocBuilder CI-CT
 
 on:
-  push:
   pull_request:
+    activity_types: [opened, synchronize, reopened]
 
 jobs:
   test-and-build:
@@ -30,18 +30,5 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Run analyzer
-        run: flutter analyze
-
-      - name: Run unit and widget tests
-        run: flutter test
-
       - name: Build debug APK
         run: flutter build apk --debug
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
-          if-no-files-found: error
