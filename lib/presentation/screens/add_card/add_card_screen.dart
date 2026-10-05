@@ -14,6 +14,7 @@ import '../../providers/card_provider.dart';
 import '../../providers/deck_provider.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/profile_provider.dart';
 
 class AddCardScreen extends ConsumerStatefulWidget {
   final Flashcard? editCard; // null = new card
@@ -204,8 +205,9 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
         );
         await ref.read(cardNotifierProvider.notifier).updateCard(updated);
       } else {
-        final duplicate = await _findDuplicateInDeck(
-          deckId: _selectedDeckId!,
+        final activeLanguageCode = ref.read(activeProfileProvider);
+        final duplicate = await _findDuplicateGlobally(
+          languageCode: activeLanguageCode,
           germanWord: _germanCtrl.text,
         );
 
@@ -245,14 +247,14 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
     }
   }
 
-  Future<Flashcard?> _findDuplicateInDeck({
-    required String deckId,
+  Future<Flashcard?> _findDuplicateGlobally({
+    required String languageCode,
     required String germanWord,
   }) async {
     final needle = germanWord.trim().toLowerCase();
     if (needle.isEmpty) return null;
 
-    final cards = await ref.read(cardRepositoryProvider).getByDeck(deckId);
+    final cards = await ref.read(cardRepositoryProvider).getByLanguage(languageCode);
     for (final card in cards) {
       if (card.german.trim().toLowerCase() == needle) {
         return card;
@@ -267,7 +269,7 @@ class _AddCardScreenState extends ConsumerState<AddCardScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Duplicate found'),
         content: Text(
-          'The word "${duplicate.german}" already exists in this deck. Do you want to edit the original card?',
+          'The word "${duplicate.german}" already exists in your vocabulary. Do you want to edit the original card?',
         ),
         actions: [
           TextButton(

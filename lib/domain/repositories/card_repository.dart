@@ -3,6 +3,7 @@ import '../../core/enums/review_rating.dart';
 
 abstract class CardRepository {
   Future<List<Flashcard>> getByDeck(String deckId);
+  Future<List<Flashcard>> getByLanguage(String languageCode);
   Future<List<Flashcard>> getDueCards({String? deckId});
   Future<List<Flashcard>> getDueCardsByLanguage(String languageCode);
   Future<Flashcard?> getById(String id);
@@ -10,7 +11,7 @@ abstract class CardRepository {
   Future<void> update(Flashcard card);
   Future<void> delete(String id);
   Future<void> moveToDeck(String cardId, String deckId);
-  Future<void> submitReview(String cardId, ReviewRating rating);
+  Future<void> submitReview(String cardId, ReviewRating rating, {List<int>? shortTermMinutes, List<int>? longTermDays});
   Future<Map<String, int>> getStatsByDeck(String deckId);
   Stream<List<Flashcard>> watchByDeck(String deckId);
   Stream<List<Flashcard>> watchDue({String? deckId});

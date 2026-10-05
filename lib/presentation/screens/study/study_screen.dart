@@ -20,7 +20,8 @@ import 'widgets/review_buttons.dart';
 
 class StudyScreen extends ConsumerStatefulWidget {
   final String? deckId;
-  const StudyScreen({super.key, this.deckId});
+  final String mode; // 'forward', 'reverse', 'mixed'
+  const StudyScreen({super.key, this.deckId, this.mode = 'mixed'});
 
   @override
   ConsumerState<StudyScreen> createState() => _StudyScreenState();
@@ -74,13 +75,13 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
       : await repo.getDueCardsByLanguage(ref.read(activeProfileProvider));
     if (mounted) {
       setState(() {
-        _bidirectionalEnabled = settings.bidirectionalStudy;
+        _bidirectionalEnabled = widget.mode == 'mixed' ? settings.bidirectionalStudy : false;
         final shuffled = [...due]..shuffle();
         _baseSessionCards = shuffled.take(sessionLimit).toList();
         _queue = [..._baseSessionCards];
         _currentIndex = 0;
         _isFlipped = false;
-        _reverseDirection = false;
+        _reverseDirection = widget.mode == 'reverse';
         _sessionDone = false;
       });
     }
@@ -116,7 +117,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
       _currentIndex++;
       _isFlipped = false;
       if (_currentIndex >= _queue.length) {
-        if (!_reverseDirection && _bidirectionalEnabled) {
+        if (!_reverseDirection && _bidirectionalEnabled && widget.mode == 'mixed') {
           // After finishing German -> English, run English -> German.
           _reverseDirection = true;
           _currentIndex = 0;
@@ -493,6 +494,10 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
                       deckName: deckMap[card.deckId],
                     ),
                   ),
+                  if (_currentIndex == 0 && _queue.isNotEmpty && (ref.watch(settingsProvider).valueOrNull?.hasSeenSwipeHint == false))
+                    Positioned.fill(
+                      child: _buildSwipeHintOverlay(),
+                    ),
                 ],
               ),
             ),
@@ -500,6 +505,37 @@ class _StudyScreenState extends ConsumerState<StudyScreen>
               ReviewButtons(onRating: _animateAndSubmit)
             else
               _buildFlipHint(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSwipeHintOverlay() {
+    return Container(
+      color: Colors.black.withValues(alpha: 0.6),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.swipe, color: Colors.white, size: 64),
+            const SizedBox(height: 16),
+            const Text(
+              'Swipe right for Good\nSwipe left for Again',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: () {
+                ref.read(settingsProvider.notifier).setHasSeenSwipeHint();
+              },
+              child: const Text('Got it!'),
+            ),
           ],
         ),
       ),

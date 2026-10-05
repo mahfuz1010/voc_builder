@@ -1,3 +1,4 @@
+import '../presentation/screens/decks/manage_deck_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -57,7 +58,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/study',
             builder: (_, state) {
               final extra = state.extra as Map<String, dynamic>?;
-              return StudyScreen(deckId: extra?['deckId'] as String?);
+              final mode = state.uri.queryParameters['mode'] ?? 'mixed';
+              return StudyScreen(deckId: extra?['deckId'] as String?, mode: mode);
             },
           ),
           GoRoute(
@@ -103,6 +105,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (_, state) => DeckDetailScreen(
                   deckId: state.pathParameters['deckId']!,
                 ),
+                routes: [
+                  GoRoute(
+                    path: 'manage',
+                    builder: (_, state) => ManageDeckScreen(
+                      deckId: state.pathParameters['deckId']!,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:translator/translator.dart';
 
 class TranslationService {
@@ -18,6 +19,8 @@ class TranslationService {
     try {
       final result = await _translator.translate(input, from: from, to: to);
       return result.text.trim();
+    } on SocketException catch (_) {
+      return '';
     } catch (_) {
       return '';
     }

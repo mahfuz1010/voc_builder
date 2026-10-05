@@ -111,6 +111,12 @@ class CardRepositoryImpl implements CardRepository {
   }
 
   @override
+  Future<List<Flashcard>> getByLanguage(String languageCode) async {
+    final rows = await _db.cardDao.getCardsByLanguage(languageCode);
+    return rows.map(_fromRow).toList();
+  }
+
+  @override
   Stream<List<Flashcard>> watchByDeck(String deckId) {
     return _db.cardDao.watchCardsByDeck(deckId).map((rows) => rows.map(_fromRow).toList());
   }
@@ -173,10 +179,15 @@ class CardRepositoryImpl implements CardRepository {
   }
 
   @override
-  Future<void> submitReview(String cardId, ReviewRating rating) async {
+  Future<void> submitReview(String cardId, ReviewRating rating, {List<int>? shortTermMinutes, List<int>? longTermDays}) async {
     final card = await getById(cardId);
     if (card == null) return;
-    final updated = SrsAlgorithm.applyReview(card, rating);
+    final updated = SrsAlgorithm.applyReview(
+      card,
+      rating,
+      shortTermMinutes: shortTermMinutes ?? const [10, 60, 1440],
+      longTermDays: longTermDays ?? const [3, 7, 14, 30, 90],
+    );
     await update(updated);
   }
 

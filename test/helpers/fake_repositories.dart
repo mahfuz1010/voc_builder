@@ -43,6 +43,12 @@ class FakeCardRepository implements CardRepository {
   }
 
   @override
+  Future<List<Flashcard>> getByLanguage(String languageCode) async {
+    // simplified for fake
+    return _cardsById.values.toList();
+  }
+
+  @override
   Future<Map<String, int>> getDashboardStats() async => {
         'due': 0,
         'new': 0,
@@ -93,7 +99,7 @@ class FakeCardRepository implements CardRepository {
   Future<int> resetShortTermCards() async => 0;
 
   @override
-  Future<void> submitReview(String cardId, ReviewRating rating) async {
+  Future<void> submitReview(String cardId, ReviewRating rating, {List<int>? shortTermMinutes, List<int>? longTermDays}) async {
     lastSubmitReviewCardId = cardId;
     lastSubmitReviewRating = rating;
   }
