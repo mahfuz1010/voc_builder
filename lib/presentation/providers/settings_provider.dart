@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -14,6 +15,9 @@ class AppSettings {
   final String nativeLanguage;
   /// Whether the user has completed language onboarding.
   final bool isOnboarded;
+  final bool hasSeenSwipeHint;
+  final List<int> shortTermIntervalsMinutes;
+  final List<int> longTermIntervalsDays;
 
   const AppSettings({
     this.darkMode = true,
@@ -24,6 +28,9 @@ class AppSettings {
     this.targetLanguage = 'de',
     this.nativeLanguage = 'en',
     this.isOnboarded = false,
+    this.hasSeenSwipeHint = false,
+    this.shortTermIntervalsMinutes = const [10, 60, 1440],
+    this.longTermIntervalsDays = const [3, 7, 14, 30, 90],
   });
 
   AppSettings copyWith({
@@ -35,6 +42,9 @@ class AppSettings {
     String? targetLanguage,
     String? nativeLanguage,
     bool? isOnboarded,
+    bool? hasSeenSwipeHint,
+    List<int>? shortTermIntervalsMinutes,
+    List<int>? longTermIntervalsDays,
   }) {
     return AppSettings(
       darkMode: darkMode ?? this.darkMode,
@@ -45,9 +55,14 @@ class AppSettings {
       targetLanguage: targetLanguage ?? this.targetLanguage,
       nativeLanguage: nativeLanguage ?? this.nativeLanguage,
       isOnboarded: isOnboarded ?? this.isOnboarded,
+      hasSeenSwipeHint: hasSeenSwipeHint ?? this.hasSeenSwipeHint,
+      shortTermIntervalsMinutes: shortTermIntervalsMinutes ?? this.shortTermIntervalsMinutes,
+      longTermIntervalsDays: longTermIntervalsDays ?? this.longTermIntervalsDays,
     );
   }
 }
+
+
 
 class SettingsNotifier extends AsyncNotifier<AppSettings> {
   static const _darkModeKey = 'dark_mode';
@@ -58,11 +73,31 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
   static const _targetLanguageKey = 'target_language';
   static const _nativeLanguageKey = 'native_language';
   static const _isOnboardedKey = 'is_onboarded';
+  static const _hasSeenSwipeHintKey = 'has_seen_swipe_hint';
+  static const _shortTermKey = 'short_term_intervals';
+  static const _longTermKey = 'long_term_intervals';
 
   @override
   Future<AppSettings> build() async {
     final prefs = await SharedPreferences.getInstance();
     final lastStudyMs = prefs.getInt(_lastStudyKey);
+
+    List<int> shortTerm = [10, 60, 1440];
+    final shortStr = prefs.getString(_shortTermKey);
+    if (shortStr != null) {
+      try {
+        shortTerm = List<int>.from(jsonDecode(shortStr));
+      } catch (_) {}
+    }
+
+    List<int> longTerm = [3, 7, 14, 30, 90];
+    final longStr = prefs.getString(_longTermKey);
+    if (longStr != null) {
+      try {
+        longTerm = List<int>.from(jsonDecode(longStr));
+      } catch (_) {}
+    }
+
     return AppSettings(
       darkMode: prefs.getBool(_darkModeKey) ?? true,
       dailyNewLimit: prefs.getInt(_dailyLimitKey) ?? 20,
@@ -74,7 +109,31 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
       targetLanguage: prefs.getString(_targetLanguageKey) ?? 'de',
       nativeLanguage: prefs.getString(_nativeLanguageKey) ?? 'en',
       isOnboarded: prefs.getBool(_isOnboardedKey) ?? false,
+      hasSeenSwipeHint: prefs.getBool(_hasSeenSwipeHintKey) ?? false,
+      shortTermIntervalsMinutes: shortTerm,
+      longTermIntervalsDays: longTerm,
     );
+  }
+
+  Future<void> setHasSeenSwipeHint() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_hasSeenSwipeHintKey, true);
+    final current = state.valueOrNull ?? const AppSettings();
+    state = AsyncData(current.copyWith(hasSeenSwipeHint: true));
+  }
+
+  Future<void> setShortTermIntervals(List<int> intervals) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_shortTermKey, jsonEncode(intervals));
+    final current = state.valueOrNull ?? const AppSettings();
+    state = AsyncData(current.copyWith(shortTermIntervalsMinutes: intervals));
+  }
+
+  Future<void> setLongTermIntervals(List<int> intervals) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_longTermKey, jsonEncode(intervals));
+    final current = state.valueOrNull ?? const AppSettings();
+    state = AsyncData(current.copyWith(longTermIntervalsDays: intervals));
   }
 
   Future<void> setDarkMode(bool value) async {

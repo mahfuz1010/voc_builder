@@ -97,6 +97,36 @@ class SettingsScreen extends ConsumerWidget {
               onChanged: (v) =>
                   ref.read(settingsProvider.notifier).setBidirectionalStudy(v),
             ),
+            ListTile(
+              leading: const Icon(Icons.timer_outlined),
+              title: const Text('Short-term Intervals (min)'),
+              subtitle: Text(settings.shortTermIntervalsMinutes.join(', ')),
+              onTap: () async {
+                final newValue = await _showIntervalsDialog(
+                  context,
+                  'Short-term Intervals (min)',
+                  settings.shortTermIntervalsMinutes,
+                );
+                if (newValue != null) {
+                  ref.read(settingsProvider.notifier).setShortTermIntervals(newValue);
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.calendar_today_outlined),
+              title: const Text('Long-term Intervals (days)'),
+              subtitle: Text(settings.longTermIntervalsDays.join(', ')),
+              onTap: () async {
+                final newValue = await _showIntervalsDialog(
+                  context,
+                  'Long-term Intervals (days)',
+                  settings.longTermIntervalsDays,
+                );
+                if (newValue != null) {
+                  ref.read(settingsProvider.notifier).setLongTermIntervals(newValue);
+                }
+              },
+            ),
             const Divider(),
             _SectionHeader(title: 'Progress'),
             ListTile(
@@ -188,6 +218,46 @@ class SettingsScreen extends ConsumerWidget {
       ),
     );
   }
+  Future<List<int>?> _showIntervalsDialog(BuildContext context, String title, List<int> initialValue) async {
+    final ctrl = TextEditingController(text: initialValue.join(', '));
+    return showDialog<List<int>>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: ctrl,
+          decoration: const InputDecoration(
+            hintText: 'e.g. 10, 60, 1440',
+            helperText: 'Comma-separated integers',
+          ),
+          keyboardType: TextInputType.text,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, null),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              try {
+                final vals = ctrl.text
+                    .split(',')
+                    .map((s) => int.parse(s.trim()))
+                    .toList();
+                if (vals.isNotEmpty) {
+                  Navigator.pop(ctx, vals);
+                }
+              } catch (_) {
+                // Ignore invalid
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _pickLanguage(
     BuildContext context,
     WidgetRef ref, {

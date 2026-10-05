@@ -10,6 +10,14 @@ class CardDao extends DatabaseAccessor<AppDatabase> with _$CardDaoMixin {
   Future<List<Card>> getCardsByDeck(String deckId) =>
       (select(cards)..where((c) => c.deckId.equals(deckId))).get();
 
+  Future<List<Card>> getCardsByLanguage(String languageCode) {
+    final query = select(cards).join([
+      innerJoin(decks, decks.id.equalsExp(cards.deckId)),
+    ])
+      ..where(decks.languageCode.equals(languageCode));
+    return query.map((row) => row.readTable(cards)).get();
+  }
+
   Stream<List<Card>> watchCardsByDeck(String deckId) =>
       (select(cards)..where((c) => c.deckId.equals(deckId))).watch();
 

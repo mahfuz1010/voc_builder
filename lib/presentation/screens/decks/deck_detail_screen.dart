@@ -36,20 +36,25 @@ class DeckDetailScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.file_download_outlined),
-            tooltip: AppStrings.importDeck,
-            onPressed: () => context.go('/import?deckId=$deckId'),
+            icon: const Icon(Icons.checklist_rtl_outlined),
+            tooltip: 'Manage Cards',
+            onPressed: () => context.go('/decks/$deckId/manage'),
           ),
-          IconButton(
-            icon: const Icon(Icons.file_upload_outlined),
-            tooltip: AppStrings.exportDeck,
-            onPressed: () => context.go('/export?deckId=$deckId'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.play_arrow_rounded, color: AppColors.primary),
-            tooltip: 'Study this deck',
-            onPressed: () =>
-                context.go('/study', extra: {'deckId': deckId}),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'import') context.go('/import?deckId=$deckId');
+              if (value == 'export') context.go('/export?deckId=$deckId');
+            },
+            itemBuilder: (BuildContext context) => [
+              PopupMenuItem(
+                value: 'import',
+                child: ListTile(leading: const Icon(Icons.file_download_outlined), title: Text(AppStrings.importDeck), contentPadding: EdgeInsets.zero,),
+              ),
+              PopupMenuItem(
+                value: 'export',
+                child: ListTile(leading: const Icon(Icons.file_upload_outlined), title: Text(AppStrings.exportDeck), contentPadding: EdgeInsets.zero,),
+              ),
+            ],
           ),
         ],
       ),
@@ -68,7 +73,7 @@ class DeckDetailScreen extends ConsumerWidget {
                   width: double.infinity,
                   child: FilledButton.icon(
                     onPressed: dueCount > 0
-                        ? () => context.go('/study', extra: {'deckId': deckId})
+                        ? () => _showPreStudyDialog(context, deckId)
                         : null,
                     icon: const Icon(Icons.school_rounded),
                     label: Text(
@@ -99,6 +104,39 @@ class DeckDetailScreen extends ConsumerWidget {
         error: (e, _) => Center(child: Text('Error: $e')),
       ),
     );
+  }
+
+  Future<void> _showPreStudyDialog(BuildContext context, String deckId) async {
+    final mode = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Study Options'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.swap_horiz),
+              title: const Text('Forward & Reverse'),
+              onTap: () => Navigator.pop(ctx, 'mixed'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.arrow_forward),
+              title: const Text('Target \u2192 Native'),
+              onTap: () => Navigator.pop(ctx, 'forward'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.arrow_back),
+              title: const Text('Native \u2192 Target'),
+              onTap: () => Navigator.pop(ctx, 'reverse'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (mode != null && context.mounted) {
+      context.go('/study?mode=$mode', extra: {'deckId': deckId});
+    }
   }
 }
 

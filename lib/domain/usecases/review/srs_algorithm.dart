@@ -6,13 +6,12 @@ import '../../entities/flashcard.dart';
 class SrsAlgorithm {
   SrsAlgorithm._();
 
-  // Short-term intervals in minutes
-  static const _shortTermMinutes = [10, 60, 1440]; // 10m, 1h, 1d
-
-  // Long-term intervals in days
-  static const _longTermDays = [3, 7, 14, 30, 90];
-
-  static Flashcard applyReview(Flashcard card, ReviewRating rating) {
+  static Flashcard applyReview(
+    Flashcard card,
+    ReviewRating rating, {
+    List<int> shortTermMinutes = const [10, 60, 1440],
+    List<int> longTermDays = const [3, 7, 14, 30, 90],
+  }) {
     final now = DateTime.now();
     double ease = card.easeFactor;
     int reps = card.repetitions;
@@ -28,14 +27,14 @@ class SrsAlgorithm {
         if (stage == MemoryStage.longTerm) {
           stage = MemoryStage.shortTerm;
         }
-        nextReview = now.add(const Duration(minutes: 10));
+        nextReview = now.add(Duration(minutes: shortTermMinutes.isNotEmpty ? shortTermMinutes[0] : 10));
         interval = 0;
         break;
 
       case ReviewRating.hard:
         ease = (ease - 0.15).clamp(1.3, 3.0);
         reps++;
-        final result = _calcNext(stage, reps, ease, now, isHard: true);
+        final result = _calcNext(stage, reps, ease, now, shortTermMinutes, longTermDays, isHard: true);
         nextReview = result.$1;
         interval = result.$2;
         stage = result.$3;
@@ -43,7 +42,7 @@ class SrsAlgorithm {
 
       case ReviewRating.good:
         reps++;
-        final result = _calcNext(stage, reps, ease, now);
+        final result = _calcNext(stage, reps, ease, now, shortTermMinutes, longTermDays);
         nextReview = result.$1;
         interval = result.$2;
         stage = result.$3;
@@ -52,7 +51,7 @@ class SrsAlgorithm {
       case ReviewRating.easy:
         ease = (ease + 0.15).clamp(1.3, 3.0);
         reps += 2;
-        final result = _calcNext(stage, reps, ease, now, isEasy: true);
+        final result = _calcNext(stage, reps, ease, now, shortTermMinutes, longTermDays, isEasy: true);
         nextReview = result.$1;
         interval = result.$2;
         stage = result.$3;
@@ -72,23 +71,25 @@ class SrsAlgorithm {
     MemoryStage stage,
     int reps,
     double ease,
-    DateTime now, {
+    DateTime now,
+    List<int> shortTermMinutes,
+    List<int> longTermDays, {
     bool isHard = false,
     bool isEasy = false,
   }) {
     if (stage == MemoryStage.newCard || stage == MemoryStage.shortTerm) {
       // Short-term: minute-based intervals
-      final index = (reps - 1).clamp(0, _shortTermMinutes.length - 1);
+      final index = (reps - 1).clamp(0, shortTermMinutes.length - 1);
       final minutes = isHard
-          ? _shortTermMinutes[0]
+          ? shortTermMinutes[0]
           : isEasy
-              ? _shortTermMinutes[(_shortTermMinutes.length - 1)]
-              : _shortTermMinutes[index];
+              ? shortTermMinutes[(shortTermMinutes.length - 1)]
+              : shortTermMinutes[index];
 
       final next = now.add(Duration(minutes: minutes));
 
       // Graduate to long-term after completing all short-term steps
-      if (reps >= _shortTermMinutes.length && !isHard) {
+      if (reps >= shortTermMinutes.length && !isHard) {
         return (now.add(const Duration(days: 3)), 3, MemoryStage.longTerm);
       }
 
@@ -97,21 +98,21 @@ class SrsAlgorithm {
       return (next, 0, nextStage);
     } else {
       // Long-term: day-based intervals using SM-2
-      final longTermIndex = (reps - _shortTermMinutes.length - 1)
-          .clamp(0, _longTermDays.length - 1);
+      final longTermIndex = (reps - shortTermMinutes.length - 1)
+          .clamp(0, longTermDays.length - 1);
 
       int days;
-      if (reps <= _shortTermMinutes.length) {
-        days = _longTermDays[0];
+      if (reps <= shortTermMinutes.length) {
+        days = longTermDays[0];
       } else {
-        final baseIdx = longTermIndex.clamp(0, _longTermDays.length - 1);
+        final baseIdx = longTermIndex.clamp(0, longTermDays.length - 1);
         days = isEasy
-            ? (_longTermDays[baseIdx] * 1.5).round()
+            ? (longTermDays[baseIdx] * 1.5).round()
             : isHard
-                ? (_longTermDays[baseIdx] * 0.8).clamp(1, 9999).round()
-                : (longTermIndex < _longTermDays.length
-                    ? _longTermDays[longTermIndex]
-                    : (_longTermDays.last * ease).round());
+                ? (longTermDays[baseIdx] * 0.8).clamp(1, 9999).round()
+                : (longTermIndex < longTermDays.length
+                    ? longTermDays[longTermIndex]
+                    : (longTermDays.last * ease).round());
       }
 
       return (

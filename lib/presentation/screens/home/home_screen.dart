@@ -306,7 +306,7 @@ class _StudyNowButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ElevatedButton.icon(
-      onPressed: () => context.go('/study'),
+      onPressed: () => _showPreStudyDialog(context),
       icon: const Icon(Icons.play_arrow_rounded, size: 24),
       label: Text('Study Now  •  $dueCount due'),
       style: ElevatedButton.styleFrom(
@@ -314,6 +314,39 @@ class _StudyNowButton extends StatelessWidget {
         foregroundColor: Colors.white,
       ),
     );
+  }
+
+  Future<void> _showPreStudyDialog(BuildContext context) async {
+    final mode = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Study Options'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.swap_horiz),
+              title: const Text('Forward & Reverse'),
+              onTap: () => Navigator.pop(ctx, 'mixed'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.arrow_forward),
+              title: const Text('Target \u2192 Native'),
+              onTap: () => Navigator.pop(ctx, 'forward'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.arrow_back),
+              title: const Text('Native \u2192 Target'),
+              onTap: () => Navigator.pop(ctx, 'reverse'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (mode != null && context.mounted) {
+      context.go('/study?mode=$mode');
+    }
   }
 }
 

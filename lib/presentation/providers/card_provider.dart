@@ -1,3 +1,4 @@
+import 'settings_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -117,13 +118,21 @@ final cardNotifierProvider = NotifierProvider<CardNotifier, void>(CardNotifier.n
 
 // ── Review notifier ───────────────────────────────────────────────────────────
 
+
+
 class ReviewNotifier extends Notifier<void> {
   @override
   void build() {}
 
   Future<void> submitReview(String cardId, ReviewRating rating) async {
     final existing = await ref.read(cardRepositoryProvider).getById(cardId);
-    await ref.read(cardRepositoryProvider).submitReview(cardId, rating);
+    final settings = ref.read(settingsProvider).valueOrNull;
+    await ref.read(cardRepositoryProvider).submitReview(
+      cardId,
+      rating,
+      shortTermMinutes: settings?.shortTermIntervalsMinutes,
+      longTermDays: settings?.longTermIntervalsDays,
+    );
     ref.invalidate(dashboardStatsProvider);
     ref.invalidate(dueCardsProvider);
     if (existing != null) {

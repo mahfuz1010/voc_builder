@@ -465,6 +465,8 @@ class _BackFace extends StatelessWidget {
                         de: reverse ? card.exampleEn : card.exampleDe,
                         en: reverse ? card.exampleDe : card.exampleEn,
                         notes: card.notes,
+                        targetDe: reverse ? card.english : card.german,
+                        targetEn: reverse ? card.german : card.english,
                       ),
                     ],
                     if (showSpeakTarget) ...[
@@ -679,12 +681,45 @@ class _WordInfoBlock extends StatelessWidget {
   final String en;
   final String notes;
 
+  final String targetDe;
+  final String targetEn;
+
   const _WordInfoBlock({
     required this.wordInfo,
     this.de = '',
     this.en = '',
     this.notes = '',
+    this.targetDe = '',
+    this.targetEn = '',
   });
+
+  List<TextSpan> _highlightTargetWords(String text, String target, TextStyle baseStyle) {
+    if (target.isEmpty) return [TextSpan(text: text, style: baseStyle)];
+
+    final pattern = RegExp(RegExp.escape(target), caseSensitive: false);
+    final matches = pattern.allMatches(text);
+
+    if (matches.isEmpty) return [TextSpan(text: text, style: baseStyle)];
+
+    final spans = <TextSpan>[];
+    int start = 0;
+
+    final boldStyle = baseStyle.copyWith(fontWeight: FontWeight.bold);
+
+    for (final match in matches) {
+      if (match.start > start) {
+        spans.add(TextSpan(text: text.substring(start, match.start), style: baseStyle));
+      }
+      spans.add(TextSpan(text: text.substring(match.start, match.end), style: boldStyle));
+      start = match.end;
+    }
+
+    if (start < text.length) {
+      spans.add(TextSpan(text: text.substring(start), style: baseStyle));
+    }
+
+    return spans;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -823,22 +858,32 @@ class _WordInfoBlock extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            Text(
-              de,
-              style: TextStyle(
-                color: colorScheme.onSurface,
-                fontStyle: FontStyle.italic,
-                fontSize: 13,
-                height: 1.35,
+            RichText(
+              text: TextSpan(
+                children: _highlightTargetWords(
+                  de,
+                  targetDe,
+                  TextStyle(
+                    color: colorScheme.onSurface,
+                    fontStyle: FontStyle.italic,
+                    fontSize: 13,
+                    height: 1.35,
+                  ),
+                ),
               ),
             ),
             if (en.isNotEmpty) ...[
               const SizedBox(height: 4),
-              Text(
-                en,
-                style: TextStyle(
-                  color: colorScheme.onSurfaceVariant,
-                  fontSize: 12,
+              RichText(
+                text: TextSpan(
+                  children: _highlightTargetWords(
+                    en,
+                    targetEn,
+                    TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -861,12 +906,17 @@ class _WordInfoBlock extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            Text(
-              notes,
-              style: TextStyle(
-                color: colorScheme.onSurfaceVariant,
-                fontSize: 12,
-                height: 1.35,
+            RichText(
+              text: TextSpan(
+                children: _highlightTargetWords(
+                  notes,
+                  targetDe,
+                  TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                    height: 1.35,
+                  ),
+                ),
               ),
             ),
           ],
